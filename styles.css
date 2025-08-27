@@ -3,3 +3,10 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+header{
+    top: 0;
+    background-color: aqua;
+    position: sticky;
+    z-index: 100;
+}
