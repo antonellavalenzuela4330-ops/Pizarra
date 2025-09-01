@@ -22,7 +22,7 @@ header{
   align-items: center;
 }
 
-.buttons:hover {
+.button:hover {
   background-color: #6d8eb7; 
   display: flex;
   align-items: center;
