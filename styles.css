@@ -12,23 +12,21 @@ header{
 }
 
 button {
-  background: none;      
-  border: none;          
-  color: #425b69;      
-  font-size: 18px;       
-  margin: 0 8px;         
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
   cursor: pointer;
-  display: flex;
-  align-items: center;
+  display: inline-block;
 }
 
 button:hover {
-  display: flex;
-  align-items: center;
-  padding: 5px 15px;
+  filter: brightness(0.85);
 }
 
 button img {
-  height: 24px;
-  margin-right: 8px;
-}   
+  height: 32px;
+  width: 32px;
+  display: block;
+  margin: 0 auto;
+}
