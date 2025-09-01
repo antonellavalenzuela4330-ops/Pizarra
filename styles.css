@@ -6,7 +6,7 @@
 
 header{
     top: 0;
-    background-color: #2f3e46;
+    background-color: #425b69;
     position: sticky;
     z-index: 100;
 }
@@ -14,7 +14,7 @@ header{
 .buttons {
   background: none;      
   border: none;          
-  color: #2f3e46;      
+  color: #425b69;      
   font-size: 18px;       
   margin: 0 8px;         
   cursor: pointer;
@@ -23,7 +23,6 @@ header{
 }
 
 .button:hover {
-  background-color: #6d8eb7; 
   display: flex;
   align-items: center;
   padding: 5px 15px;
@@ -32,4 +31,4 @@ header{
 button img {
   height: 24px;
   margin-right: 8px;
-}
+}   
