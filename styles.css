@@ -6,7 +6,7 @@
 
 header{
     top: 0;
-    background-color: aqua;
+    background-color: rgb(0, 179, 179);
     position: sticky;
     z-index: 100;
 }
