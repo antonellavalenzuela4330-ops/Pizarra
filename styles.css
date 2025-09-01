@@ -1,3 +1,6 @@
+body {
+  background: #425b69;
+}
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +9,7 @@
 
 header{
   top: 0;
-  background-color: #425b69;
+  background: transparent !important;
   position: sticky;
   z-index: 100;
 }
