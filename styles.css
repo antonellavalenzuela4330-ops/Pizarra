@@ -11,7 +11,7 @@ header{
     z-index: 100;
 }
 
-.navbar button {
+.buttons {
   background: none;      
   border: none;          
   color: #2f3e46;      
@@ -22,14 +22,14 @@ header{
   align-items: center;
 }
 
-.navbar {
+.buttons:hover {
   background-color: #6d8eb7; 
   display: flex;
   align-items: center;
   padding: 5px 15px;
 }
 
-.navbar img {
+button img {
   height: 24px;
   margin-right: 8px;
 }
