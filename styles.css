@@ -5,10 +5,16 @@
 }
 
 header{
-    top: 0;
-    background-color: #425b69;
-    position: sticky;
-    z-index: 100;
+  top: 0;
+  background-color: #425b69;
+  position: sticky;
+  z-index: 100;
+}
+
+.buttons, .buttons > div, .buttons > div > div {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 button {
