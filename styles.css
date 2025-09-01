@@ -11,7 +11,7 @@ header{
     z-index: 100;
 }
 
-.button {
+button {
   background: none;      
   border: none;          
   color: #425b69;      
@@ -22,7 +22,7 @@ header{
   align-items: center;
 }
 
-.button:hover {
+button:hover {
   display: flex;
   align-items: center;
   padding: 5px 15px;
