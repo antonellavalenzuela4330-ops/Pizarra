@@ -31,3 +31,7 @@ button img {
   display: block;
   margin: 0 auto;
 }
+
+#file-input{
+  display: none;
+}
