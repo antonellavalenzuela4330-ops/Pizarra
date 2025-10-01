@@ -75,13 +75,12 @@ header {
     position: relative;
 }
 
-/* Asegurar que las imágenes dentro de los botones sean clickeables */
+/* Asegurar que las imágenes dentro de los botones no interfieran con los clicks */
 .header-btn img, .tool-btn img {
     width: 20px;
     height: 20px;
     display: block;
-    cursor: pointer;
-    pointer-events: auto;
+    pointer-events: none; /* Las imágenes no interceptan eventos */
 }
 
 .header-btn:hover, .tool-btn:hover {
