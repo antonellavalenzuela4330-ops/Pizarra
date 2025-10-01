@@ -71,6 +71,17 @@ header {
     will-change: background-color, transform;
     transform: translateZ(0);
     backface-visibility: hidden;
+    /* Asegurar que todo el botón sea clickeable */
+    position: relative;
+}
+
+/* Asegurar que las imágenes dentro de los botones sean clickeables */
+.header-btn img, .tool-btn img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    cursor: pointer;
+    pointer-events: auto;
 }
 
 .header-btn:hover, .tool-btn:hover {
@@ -351,7 +362,7 @@ header {
 }
 
 .text-box-container .text-controls {
-    pointer-events: auto; /* Los controles sí interceptenan eventos */
+    pointer-events: auto; /* Los controles sí interceptan eventos */
 }
 
 /* Cuando está en modo mover, el contenedor intercepta eventos */
@@ -1216,10 +1227,4 @@ header {
     .tool-group {
         justify-content: center;
     }
-}
-
-/* ...existing code... */
-.header-btn *,
-.tool-btn * {
-    pointer-events: none;
 }
