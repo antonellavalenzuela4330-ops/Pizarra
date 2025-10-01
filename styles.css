@@ -351,7 +351,7 @@ header {
 }
 
 .text-box-container .text-controls {
-    pointer-events: auto; /* Los controles sí interceptan eventos */
+    pointer-events: auto; /* Los controles sí interceptenan eventos */
 }
 
 /* Cuando está en modo mover, el contenedor intercepta eventos */
@@ -1216,4 +1216,10 @@ header {
     .tool-group {
         justify-content: center;
     }
+}
+
+/* ...existing code... */
+.header-btn *,
+.tool-btn * {
+    pointer-events: none;
 }
