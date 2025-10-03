@@ -297,7 +297,7 @@ header {
     min-height: calc(100vh - 60px);
     background: white;
     position: relative;
-    overflow: hidden;
+    overflow: auto;
     margin: 0;
     padding: 0;
     margin-top: 60px;
@@ -692,7 +692,7 @@ header {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border-bottom: 2px solid #00bcd4;
     transition: max-height 0.3s ease, opacity 0.3s ease;
-    z-index: 150;
+    z-index: 50;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
@@ -702,42 +702,43 @@ header {
 }
 
 .toolbar.open {
-    max-height: 200px;
+    max-height: 150px;
     opacity: 1;
+    overflow-y: auto;
 }
 
 .toolbar-content {
-    padding: 15px 20px;
+    padding: 8px 15px;
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 8px;
     align-items: flex-start;
     max-width: 1200px;
     margin: 0 auto;
 }
 
 .tool-section {
-    margin-bottom: 20px;
+    margin-bottom: 8px;
     background: rgba(255, 255, 255, 0.7);
-    border-radius: 8px;
-    padding: 12px;
+    border-radius: 6px;
+    padding: 8px;
     border: 1px solid rgba(0, 188, 212, 0.2);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .tool-section h4 {
     color: #00bcd4;
-    margin-bottom: 12px;
-    font-size: 14px;
+    margin-bottom: 6px;
+    font-size: 12px;
     font-weight: 600;
     border-bottom: 1px solid rgba(0, 188, 212, 0.3);
-    padding-bottom: 6px;
+    padding-bottom: 3px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .tool-option {
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .tool-option label {
@@ -770,19 +771,19 @@ header {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border: 1px solid #dee2e6;
     color: #495057;
-    padding: 10px 14px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 13px;
-    margin: 3px;
+    font-size: 11px;
+    margin: 2px;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     white-space: nowrap;
     font-weight: 500;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    min-height: 36px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    min-height: 28px;
     /* Optimizaciones de rendimiento */
     will-change: background-color, border-color, transform, box-shadow;
     transform: translateZ(0);
@@ -829,8 +830,8 @@ header {
 .draw-tools, .shape-tools, .annotation-tools, .style-buttons, .align-buttons, .draw-actions, .doc-actions, .nav-tools {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 4px;
+    margin-top: 4px;
     align-items: center;
 }
 
@@ -982,14 +983,14 @@ header {
 .style-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 6px;
     align-items: center;
-    margin-bottom: 12px;
-    padding: 12px;
+    margin-bottom: 6px;
+    padding: 6px;
     background: rgba(248, 249, 250, 0.8);
-    border-radius: 8px;
+    border-radius: 6px;
     border: 1px solid rgba(0, 188, 212, 0.2);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .toolbar-btn.danger {
@@ -1086,12 +1087,12 @@ header {
 }
 
 .text-style-btn, .text-align-btn {
-    min-width: 40px;
-    height: 40px;
-    font-size: 14px;
+    min-width: 32px;
+    height: 32px;
+    font-size: 12px;
     font-weight: bold;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .text-style-btn.active, .text-align-btn.active {
@@ -1103,12 +1104,12 @@ header {
 }
 
 .text-control {
-    padding: 8px 10px;
+    padding: 6px 8px;
     border: 1px solid #dee2e6;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: 4px;
+    font-size: 11px;
     background: white;
-    min-width: 120px;
+    min-width: 100px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1120,25 +1121,25 @@ header {
 }
 
 .text-control-range {
-    width: 100px;
-    margin: 0 5px;
+    width: 80px;
+    margin: 0 3px;
 }
 
 .text-control-value {
-    font-size: 12px;    
+    font-size: 10px;    
     color: #666;
-    min-width: 40px;
+    min-width: 35px;
     text-align: center;
 }
 
 .text-control-color {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border: 2px solid #dee2e6;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     background: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1204,22 +1205,22 @@ header {
 }
 
 .image-control-range {
-    width: 100px;
-    margin: 0 5px;
+    width: 80px;
+    margin: 0 3px;
 }
 
 .image-control-value {
-    font-size: 12px;
+    font-size: 10px;
     color: #666;
-    min-width: 40px;
+    min-width: 35px;
     text-align: center;
 }
 
 .image-control-select {
-    padding: 8px 10px;
+    padding: 6px 8px;
     border: 1px solid #dee2e6;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: 4px;
+    font-size: 11px;
     background: white;
     width: 100%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
