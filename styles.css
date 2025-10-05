@@ -37,6 +37,7 @@ header {
     background: #00bcd4;
     z-index: 100;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: height 0.3s ease;
 }
 
 .header-content {
@@ -300,7 +301,7 @@ header {
     overflow: auto;
     margin: 0;
     padding: 0;
-    margin-top: 60px;
+    /* El canvas no necesita margin-top porque el header es 'sticky' */
 }
 
 .canvas-content {
@@ -682,111 +683,105 @@ header {
     background: #00bcd4;
 }
 
-/* Barra de herramientas desplegable */
+/* Barra de herramientas integrada */
 .toolbar {
-    position: fixed;
-    top: 60px;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-bottom: 2px solid #00bcd4;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-    z-index: 50;
+    background: #ffffff; /* Cambiado a blanco para un aspecto más limpio */
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    /* Optimizaciones de rendimiento */
-    will-change: max-height, opacity;
-    transform: translateZ(0);
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    padding: 0 20px;
 }
 
 .toolbar.open {
-    max-height: 150px;
+    max-height: 70px;
     opacity: 1;
-    overflow-y: auto;
+    overflow: hidden; /* Cambiado para controlar el desbordamiento */
+    padding: 0 20px;
+    height: 70px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra sutil para la separación */
 }
 
 .toolbar-content {
-    padding: 8px 15px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: flex-start;
-    max-width: 1200px;
-    margin: 0 auto;
+    flex-wrap: nowrap; /* Forzar una sola línea */
+    gap: 10px; /* Reducir el espacio */
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto; /* Permitir scroll si es necesario */
+    overflow-y: hidden;
 }
 
-.tool-section {
-    margin-bottom: 8px;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 6px;
-    padding: 8px;
-    border: 1px solid rgba(0, 188, 212, 0.2);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-.tool-section h4 {
-    color: #00bcd4;
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    border-bottom: 1px solid rgba(0, 188, 212, 0.3);
-    padding-bottom: 3px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
+/* Estilos para las nuevas clases de la barra de herramientas */
 .tool-option {
-    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .tool-option label {
-    display: block;
-    margin-bottom: 5px;
+    font-size: 12px;
     color: #333;
-    font-size: 14px;
-    font-weight: 500;
+    white-space: nowrap;
 }
 
-.tool-option input, .tool-option select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
+.toolbar-range {
+    width: 80px;
+}
+
+.toolbar-value {
+    font-size: 12px;
+    color: #666;
+    min-width: 30px;
+    text-align: left;
+}
+
+.toolbar-color {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #dee2e6;
     border-radius: 4px;
-    font-size: 14px;
-}
-
-.tool-option input[type="color"] {
-    height: 40px;
     padding: 2px;
+    cursor: pointer;
 }
 
-.tool-option input[type="range"] {
-    padding: 0;
+.toolbar-select {
+    padding: 6px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
 }
 
-/* Botones de herramientas */
+.toolbar-divider {
+    width: 1px;
+    height: 30px;
+    background-color: #dee2e6;
+    margin: 0 8px;
+}
+
 .toolbar-btn {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    background: #ffffff;
     border: 1px solid #dee2e6;
     color: #495057;
     padding: 6px 10px;
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
     font-size: 11px;
-    margin: 2px;
+    margin: 0;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 5px;
     white-space: nowrap;
     font-weight: 500;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    min-height: 28px;
-    /* Optimizaciones de rendimiento */
-    will-change: background-color, border-color, transform, box-shadow;
-    transform: translateZ(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    min-height: 34px;
+    width: auto;
+    flex-shrink: 0;
 }
 
 /* Botón de cierre en la barra de herramientas */
@@ -829,10 +824,13 @@ header {
 /* Contenedores de botones */
 .draw-tools, .shape-tools, .annotation-tools, .style-buttons, .align-buttons, .draw-actions, .doc-actions, .nav-tools {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 6px;
     margin-top: 4px;
-    align-items: center;
+    align-items: stretch;
+    justify-content: center;
+    width: 100%;
 }
 
 /* Valores de sliders */
@@ -982,26 +980,29 @@ header {
 
 .style-buttons {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: 6px;
     align-items: center;
-    margin-bottom: 6px;
-    padding: 6px;
-    background: rgba(248, 249, 250, 0.8);
-    border-radius: 6px;
-    border: 1px solid rgba(0, 188, 212, 0.2);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    justify-content: center;
+    margin-bottom: 0;
+    margin-top: 4px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    width: 100%;
 }
 
 .toolbar-btn.danger {
-    background: #dc3545;
+    background: #6c757d;
     color: white;
-    border-color: #c82333;
+    border-color: #5a6268;
 }
 
 .toolbar-btn.danger:hover {
-    background: #c82333;
-    border-color: #bd2130;
+    background: #5a6268;
+    border-color: #495057;
 }
 
 .toolbar-btn.secondary {
@@ -1044,12 +1045,21 @@ header {
 
 /* Estilos para herramienta de texto */
 .text-tool-section {
-    margin-bottom: 15px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 188, 212, 0.2);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 8px;
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 120px;
+    max-width: 180px;
+    flex-shrink: 0;
+    min-height: 50px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 /* Botón de crear cuadro de texto */
@@ -1070,29 +1080,36 @@ header {
 }
 
 .text-tool-section h4 {
-    margin: 0 0 8px 0;
     color: #00bcd4;
-    font-size: 14px;
+    margin: 0 0 4px 0;
+    font-size: 11px;
     font-weight: 600;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    text-align: center;
+    line-height: 1.2;
 }
 
 .tool-group {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    margin-top: 8px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 6px;
+    align-items: stretch;
+    justify-content: center;
+    margin-top: 4px;
+    width: 100%;
 }
 
 .text-style-btn, .text-align-btn {
-    min-width: 32px;
-    height: 32px;
+    min-width: 36px;
+    height: 36px;
     font-size: 12px;
     font-weight: bold;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    width: auto;
+    flex-grow: 1;
 }
 
 .text-style-btn.active, .text-align-btn.active {
@@ -1133,10 +1150,10 @@ header {
 }
 
 .text-control-color {
-    width: 32px;
-    height: 32px;
-    border: 2px solid #dee2e6;
-    border-radius: 6px;
+    width: 100%;
+    height: 26px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
     cursor: pointer;
     background: none;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -1160,8 +1177,8 @@ header {
 
 /* Modo mover para elementos de texto */
 .canvas-element.move-mode {
-    border-color: #4caf50 !important;
-    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.4) !important;
+    border-color: #17a2b8 !important;
+    box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.4) !important;
     cursor: move !important;
 }
 
@@ -1171,21 +1188,32 @@ header {
 
 /* Estilos para herramienta de imagen */
 .image-tool-section {
-    margin-bottom: 15px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 188, 212, 0.2);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 8px;
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 120px;
+    max-width: 180px;
+    flex-shrink: 0;
+    min-height: 50px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 .image-tool-section h4 {
-    margin: 0 0 8px 0;
     color: #00bcd4;
-    font-size: 14px;
+    margin: 0 0 4px 0;
+    font-size: 11px;
     font-weight: 600;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    text-align: center;
+    line-height: 1.2;
 }
 
 .create-image-btn {
@@ -1271,4 +1299,26 @@ header {
     .tool-group {
         justify-content: center;
     }
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 15px !important;
+    height: 15px !important;
+    border-radius: 50% !important;
+    background: #00bcd4 !important;
+    cursor: pointer !important;
+    border: 2px solid white !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 15px !important;
+    height: 15px !important;
+    border-radius: 50% !important;
+    background: #00bcd4 !important;
+    cursor: pointer !important;
+    border: 2px solid white !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
 }
