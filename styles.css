@@ -401,6 +401,11 @@ header {
     cursor: text;
 }
 
+.canvas-element.selected .text-element,
+.text-element:focus {
+    border: 1px solid #00bcd4;
+}
+
 .text-element::placeholder {
     color: #999;
     font-style: italic;
