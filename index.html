@@ -54,6 +54,17 @@
                 <div class="project-name-container">
                     <input type="text" id="project-name" placeholder="Nombre proyecto" value="Proyecto sin nombre">
                 </div>
+                
+                <!-- Controles de historial y limpieza -->
+                <button id="undo-btn" class="header-btn" title="Deshacer">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button id="redo-btn" class="header-btn" title="Rehacer">
+                    <i class="fas fa-redo"></i>
+                </button>
+                <button id="clear-all-btn" class="header-btn" title="Limpiar todo">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
             
             <!-- Lado derecho - Herramientas -->
@@ -91,7 +102,6 @@
     <!-- Canvas principal -->
     <main id="canvas" class="canvas">
         <div class="canvas-content">
-            <span class="canvas-title">PIZARRA</span>
         </div>
     </main>
 
