@@ -1327,3 +1327,127 @@ input[type="range"]::-moz-range-thumb {
     border: 2px solid white !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
 }
+
+/* ===== Paneles Flotantes (Toolbar y Capas) ===== */
+.floating-panel {
+    position: absolute;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1002;
+    display: none; /* Oculto por defecto */
+    flex-direction: column;
+    width: 280px;
+    max-height: 70vh;
+}
+
+.floating-panel.active {
+    display: flex;
+}
+
+#layers-panel {
+    top: 70px;
+    right: 20px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.panel-content {
+    overflow-y: auto;
+    padding: 10px;
+    flex-grow: 1;
+}
+
+.panel-footer {
+    padding: 10px 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* ===== Estilos Específicos del Panel de Capas ===== */
+.layer-group {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background-color: #fafafa;
+}
+
+.layer-group.active {
+    border-color: #007bff;
+    background-color: #f0f8ff;
+}
+
+.layer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.layer-name {
+    font-weight: bold;
+    outline: none;
+}
+
+.layer-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 8px;
+    color: #555;
+    padding: 3px;
+}
+
+.layer-actions button:hover {
+    color: #000;
+}
+
+.layer-elements {
+    padding: 8px;
+}
+
+.empty-layer-msg {
+    color: #888;
+    font-style: italic;
+    font-size: 13px;
+    padding: 10px;
+    display: block;
+}
+
+.canvas-element[data-type="document"] {
+    /* Asegurar que los eventos de ratón no sean capturados por el contenedor del PDF, 
+       permitiendo la interacción con capas superiores. */
+    pointer-events: none; 
+}
+
+.canvas-element[data-type="document"] > * {
+    /* Los hijos del contenedor (los canvas de cada página) sí deben ser visibles. */
+    pointer-events: auto;
+}
+
+#drawing-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 50; /* Z-index alto para estar sobre otros elementos */
+    pointer-events: none; /* Por defecto no captura eventos */
+}
+
+.canvas-element .resize-handle {
+    display: none !important;
+}
