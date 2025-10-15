@@ -1451,3 +1451,27 @@ input[type="range"]::-moz-range-thumb {
 .canvas-element .resize-handle {
     display: none !important;
 }
+
+/* En styles.css - agregar al final */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    font-size: 14px;
+}
+
+.logout-btn {
+    color: white;
+    text-decoration: none;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+    background: rgba(255,255,255,0.3);
+    text-decoration: none;
+    color: white;
+}
