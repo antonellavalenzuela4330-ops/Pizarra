@@ -51,7 +51,7 @@ if (!isset($_SESSION['usuario_id'])) {
                 
                 <!-- Logo -->
                 <div class="logo">
-                    <img src="img/boardly.png" alt="Logo" style="width: 85px; height: 40px;">
+                    <img src="img/Boardly.png" alt="Logo" style="width: 85px; height: 40px;">
                 </div>
 
                 <!-- Guardar -->
