@@ -1,4 +1,4 @@
-﻿// Pizarra Digital - Aplicación Principal
+// Pizarra Digital - Aplicación Principal
 class PizarraApp {
     constructor() {
         // Optimización: inicializar solo propiedades esenciales
@@ -16,7 +16,7 @@ class PizarraApp {
         this.dragStart = { x: 0, y: 0 };
         this.resizeHandle = null;
         this.imageMode = null;
-        this.textMode = null; // 'create'
+        this.textMode = null;
         this.isCreatingTextBox = false;
         this.textBoxSize = {};
         this.currentDocument = null;
@@ -46,12 +46,10 @@ class PizarraApp {
         };
         this.activeLayerId = this.board.layers[0].id;
 
-        // ... (resto de inicializaciones como selectedTool, etc.)
-
         // Manejadores del panel de capas
-        document.getElementById('layers-btn').addEventListener('click', () => this.toggleLayersPanel());
-        document.getElementById('close-layers-panel').addEventListener('click', () => this.toggleLayersPanel(false));
-        document.getElementById('add-layer-btn').addEventListener('click', () => this.addLayer());
+        document.getElementById('layers-btn')?.addEventListener('click', () => this.toggleLayersPanel());
+        document.getElementById('close-layers-panel')?.addEventListener('click', () => this.toggleLayersPanel(false));
+        document.getElementById('add-layer-btn')?.addEventListener('click', () => this.addLayer());
 
         this.board.zoom = 1;
         this.board.pan = { x: 0, y: 0 };
@@ -61,7 +59,7 @@ class PizarraApp {
         const canvas = document.getElementById('canvas');
         canvas.addEventListener('wheel', (e) => this.handleWheel(e));
         canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 1) { // Botón central del ratón
+            if (e.button === 1) {
                 this.isPanning = true;
                 this.lastPanPoint = { x: e.clientX, y: e.clientY };
                 canvas.style.cursor = 'grabbing';
@@ -86,31 +84,27 @@ class PizarraApp {
     }
     
     async init() {
-        // Optimización: inicializar en orden de prioridad
         this.setupEventListeners();
         
         // Cargar proyecto actual de forma asíncrona
         await this.loadProjects();
         this.updateProjectsList();
         if (this.projects.length > 0) {
-            // Cargar el primer proyecto por defecto
             this.loadProject(this.projects[0].id);
         } else {
-            // Crear un proyecto por defecto
             this.createNewProject();
         }
         this.initializeToolPanel();
     }
 
     initializeToolPanel() {
-        // Asegurar que la barra esté cerrada inicialmente
         const toolbar = document.getElementById('toolbar');
         if (toolbar) {
             toolbar.classList.remove('open');
         }
     }
 
-    // ===== GESTIÓN DE PROYECTOS =====
+    // ===== GESTIÓN DE PROYECTOS CON BASE DE DATOS =====
     async loadProjects() {
         try {
             const response = await fetch('api/get_projects.php');
@@ -125,7 +119,7 @@ class PizarraApp {
     }
 
     saveProjects() {
-        // No se usa localStorage, los proyectos se guardan en la base de datos
+        // Ya no se usa localStorage
         console.log('Projects are now saved in database');
     }
 
@@ -397,6 +391,8 @@ class PizarraApp {
 
     updateProjectsList() {
         const projectsList = document.getElementById('projects-list');
+        if (!projectsList) return;
+        
         projectsList.innerHTML = '';
 
         this.projects.forEach(project => {
@@ -418,18 +414,18 @@ class PizarraApp {
 
     // ===== INTERFAZ DE USUARIO =====
     setupEventListeners() {
-        // Event listeners individuales para cada botón - más confiable
-        document.getElementById('menu-btn').addEventListener('click', (e) => {
+        // Event listeners individuales para cada botón
+        document.getElementById('menu-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleSidebar();
         });
         
-        document.getElementById('save-btn').addEventListener('click', (e) => {
+        document.getElementById('save-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.saveCurrentProject();
         });
         
-        document.getElementById('image-btn').addEventListener('click', (e) => {
+        document.getElementById('image-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             const button = e.currentTarget;
             button.classList.add('processing');
@@ -437,7 +433,7 @@ class PizarraApp {
             this.selectTool('image');
         });
         
-        document.getElementById('text-btn').addEventListener('click', (e) => {
+        document.getElementById('text-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             const button = e.currentTarget;
             button.classList.add('processing');
@@ -445,7 +441,7 @@ class PizarraApp {
             this.selectTool('text');
         });
         
-        document.getElementById('draw-btn').addEventListener('click', (e) => {
+        document.getElementById('draw-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             const button = e.currentTarget;
             button.classList.add('processing');
@@ -453,7 +449,7 @@ class PizarraApp {
             this.selectTool('draw');
         });
         
-        document.getElementById('document-btn').addEventListener('click', (e) => {
+        document.getElementById('document-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             const button = e.currentTarget;
             button.classList.add('processing');
@@ -469,21 +465,21 @@ class PizarraApp {
         });
 
         // Inputs de archivos
-        document.getElementById('file-input-img').addEventListener('change', (e) => this.handleImageUpload(e));
-        document.getElementById('document-btn').addEventListener('click', () => document.getElementById('file-input-doc').click());
-        document.getElementById('file-input-doc').addEventListener('change', (e) => this.handleDocumentUpload(e));
+        document.getElementById('file-input-img')?.addEventListener('change', (e) => this.handleImageUpload(e));
+        document.getElementById('document-btn')?.addEventListener('click', () => document.getElementById('file-input-doc').click());
+        document.getElementById('file-input-doc')?.addEventListener('change', (e) => this.handleDocumentUpload(e));
 
         // Tutorial
-        document.getElementById('tutorial-btn').addEventListener('click', () => this.openTutorial());
-        document.getElementById('close-tutorial').addEventListener('click', () => this.closeTutorial());
-        document.getElementById('prev-slide').addEventListener('click', () => this.prevSlide());
-        document.getElementById('next-slide').addEventListener('click', () => this.nextSlide());
+        document.getElementById('tutorial-btn')?.addEventListener('click', () => this.openTutorial());
+        document.getElementById('close-tutorial')?.addEventListener('click', () => this.closeTutorial());
+        document.getElementById('prev-slide')?.addEventListener('click', () => this.prevSlide());
+        document.getElementById('next-slide')?.addEventListener('click', () => this.nextSlide());
 
         // Canvas - Optimización de eventos
         const canvas = document.getElementById('canvas');
         canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
         canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        canvas.addEventListener('mousemove', this.throttle((e) => this.handleMouseMove(e), 16)); // ~60fps
+        canvas.addEventListener('mousemove', this.throttle((e) => this.handleMouseMove(e), 16));
         canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
         
@@ -491,41 +487,10 @@ class PizarraApp {
         canvas.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
 
         // Cambio de nombre del proyecto
-        document.getElementById('project-name').addEventListener('change', () => {
+        document.getElementById('project-name')?.addEventListener('change', () => {
             if (this.currentProject) {
                 this.currentProject.name = document.getElementById('project-name').value;
             }
-        });
-
-        // La barra de herramientas ahora permanece abierta hasta que se cierre manualmente
-        // Eliminado el cierre automático al hacer clic fuera
-
-        const fontSelector = document.getElementById('font-selector');
-        if (fontSelector) {
-            fontSelector.addEventListener('change', (e) => this.setTextFont(e.target.value));
-        }
-        
-        // Nuevos listeners para tamaño, color y resaltado
-        const sizeSlider = document.getElementById('size-slider');
-        if (sizeSlider) {
-            sizeSlider.addEventListener('input', (e) => {
-            document.getElementById('size-value').textContent = `${e.target.value}px`;
-            this.applyTextTransform('fontSize', `${e.target.value}px`);
-        });
-        document.getElementById('color-picker').addEventListener('input', (e) => this.applyTextTransform('color', e.target.value));
-        document.getElementById('highlight-picker').addEventListener('input', (e) => this.applyTextTransform('highlightColor', e.target.value));
-        document.getElementById('highlight-toggle').addEventListener('click', () => this.applyTextTransform('highlight'));
-
-        // Manejo de la barra de herramientas de texto con delegación de eventos
-        document.getElementById('toolbar').addEventListener('click', (e) => {
-            const target = e.target.closest('button');
-            if (!target) return;
-
-            const style = target.dataset.style;
-            const align = target.dataset.align;
-
-            if (style) this.applyTextTransform(style);
-            if (align) this.setTextAlign(align);
         });
     }
 
@@ -551,20 +516,16 @@ class PizarraApp {
         
         // Si la herramienta ya está activa, desactivarla y cerrar la barra
         if (this.selectedTool === tool && toolBtn?.classList.contains('active')) {
-            // Desactivar herramienta
             toolBtn.classList.remove('active');
             this.selectedTool = null;
             
-            // Cerrar barra de herramientas
             if (toolbar) {
                 toolbar.classList.remove('open');
                 toolbar.removeAttribute('data-current-tool');
             }
             
-            // Restaurar cursor
             const canvas = document.getElementById('canvas');
             canvas.style.cursor = 'default';
-            
             return;
         }
         
@@ -577,7 +538,7 @@ class PizarraApp {
             toolBtn.classList.add('active');
         }
         
-        this.textMode = null; // Reset text mode
+        this.textMode = null;
         
         // Actualizar cursor para herramientas de dibujo
         if (tool === 'draw') {
@@ -592,11 +553,9 @@ class PizarraApp {
     }
 
     deselectTool() {
-        // Desactivar todas las herramientas
         document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
         this.selectedTool = null;
         
-        // Cerrar barra de herramientas
         const toolbar = document.getElementById('toolbar');
         if (toolbar) {
             toolbar.classList.remove('open');
@@ -605,23 +564,16 @@ class PizarraApp {
 
     showToolPanel(tool) {
         const toolbar = document.getElementById('toolbar');
+        if (!toolbar) return;
         
-        if (!toolbar) {
-            return;
-        }
-        
-        // Optimización: Solo regenerar contenido si es necesario
         const currentTool = toolbar.getAttribute('data-current-tool');
         if (currentTool === tool && toolbar.classList.contains('open')) {
-            // Re-bind events just in case
             this.setupToolEvents(tool);
             return;
         }
         
-        // Cerrar barra anterior si está abierta
         toolbar.classList.remove('open');
         
-        // Crear o encontrar el contenido de la barra
         let content = document.querySelector('.toolbar-content');
         if (!content) {
             content = document.createElement('div');
@@ -629,7 +581,6 @@ class PizarraApp {
             toolbar.appendChild(content);
         }
         
-        // Generar contenido según la herramienta
         switch(tool) {
             case 'image':
                 content.innerHTML = this.getImageToolPanel();
@@ -647,13 +598,10 @@ class PizarraApp {
                 content.innerHTML = `<div>Herramienta: ${tool}</div>`;
         }
         
-        // Marcar herramienta actual
         toolbar.setAttribute('data-current-tool', tool);
         
-        // Mostrar la barra después de generar el contenido
         requestAnimationFrame(() => {
             toolbar.classList.add('open');
-            // Configurar eventos después de que el contenido esté en el DOM
             this.setupToolEvents(tool);
         });
     }
@@ -675,17 +623,6 @@ class PizarraApp {
                 <input type="range" id="image-opacity" min="0" max="100" value="100" class="toolbar-range">
                 <span id="opacity-value" class="toolbar-value">100%</span>
             </div>
-            <div class="tool-option">
-                <label>Fondo:</label>
-                <select id="image-blend-mode" class="toolbar-select">
-                    <option value="normal">Sin fondo</option>
-                    <option value="multiply">Multiplicar</option>
-                    <option value="screen">Pantalla</option>
-                    <option value="overlay">Superponer</option>
-                    <option value="darken">Oscurecer</option>
-                    <option value="lighten">Aclarar</option>
-                </select>
-            </div>
         `;
     }
 
@@ -702,7 +639,6 @@ class PizarraApp {
                 <button onclick="app.setTextAlign('left')" class="toolbar-btn text-align-btn"><i class="fas fa-align-left"></i></button>
                 <button onclick="app.setTextAlign('center')" class="toolbar-btn text-align-btn"><i class="fas fa-align-center"></i></button>
                 <button onclick="app.setTextAlign('right')" class="toolbar-btn text-align-btn"><i class="fas fa-align-right"></i></button>
-                <button onclick="app.setTextAlign('justify')" class="toolbar-btn text-align-btn"><i class="fas fa-align-justify"></i></button>
             </div>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
@@ -711,9 +647,6 @@ class PizarraApp {
                     <option value="Arial">Arial</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Comic Sans MS">Comic Sans MS</option>
                 </select>
             </div>
             <div class="tool-option">
@@ -725,10 +658,6 @@ class PizarraApp {
                 <label>Color:</label>
                 <input type="color" id="text-color" value="#000000" class="toolbar-color">
             </div>
-            <div class="tool-option">
-                <label>Resaltado:</label>
-                <input type="color" id="text-highlight" value="#ffffff" class="toolbar-color">
-            </div>
         `;
     }
 
@@ -736,13 +665,11 @@ class PizarraApp {
         return `
             <button onclick="app.drawingTool.setTool('pen')" class="toolbar-btn active" data-tool="pen"><i class="fas fa-pen"></i> Lápiz</button>
             <button onclick="app.drawingTool.setTool('brush')" class="toolbar-btn" data-tool="brush"><i class="fas fa-paint-brush"></i> Pincel</button>
-            <button onclick="app.drawingTool.setTool('marker')" class="toolbar-btn" data-tool="marker"><i class="fas fa-highlighter"></i> Marcador</button>
             <button onclick="app.drawingTool.setTool('eraser')" class="toolbar-btn" data-tool="eraser"><i class="fas fa-eraser"></i> Borrador</button>
             <span class="toolbar-divider"></span>
             <button onclick="app.drawingTool.setShape('line')" class="toolbar-btn" data-shape="line"><i class="fas fa-minus"></i> Línea</button>
             <button onclick="app.drawingTool.setShape('rectangle')" class="toolbar-btn" data-shape="rectangle"><i class="far fa-square"></i> Rectángulo</button>
             <button onclick="app.drawingTool.setShape('circle')" class="toolbar-btn" data-shape="circle"><i class="far fa-circle"></i> Círculo</button>
-            <button onclick="app.drawingTool.setShape('arrow')" class="toolbar-btn" data-shape="arrow"><i class="fas fa-arrow-right"></i> Flecha</button>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
                 <label>Grosor:</label>
@@ -753,41 +680,23 @@ class PizarraApp {
                 <label>Color:</label>
                 <input type="color" id="draw-color" value="#000000" class="toolbar-color">
             </div>
-            <div class="tool-option">
-                <label>Opacidad:</label>
-                <input type="range" id="draw-opacity" min="10" max="100" value="100" class="toolbar-range">
-                <span id="opacity-value" class="toolbar-value">100%</span>
-            </div>
             <span class="toolbar-divider"></span>
             <button onclick="app.drawingTool.clear()" class="toolbar-btn danger"><i class="fas fa-trash"></i> Limpiar Todo</button>
-            <button onclick="app.drawingTool.undo()" class="toolbar-btn secondary"><i class="fas fa-undo"></i> Deshacer</button>
-            <button onclick="app.drawingTool.redo()" class="toolbar-btn secondary"><i class="fas fa-redo"></i> Rehacer</button>
         `;
     }
 
     getDocumentToolPanel() {
         return `
             <button onclick="app.triggerDocumentUpload()" class="toolbar-btn"><i class="fas fa-file-upload"></i> Subir Documento</button>
-            <button onclick="app.setDocumentMode('move')" class="toolbar-btn"><i class="fas fa-arrows-alt"></i> Mover</button>
-            <button onclick="app.setDocumentMode('resize')" class="toolbar-btn"><i class="fas fa-expand-arrows-alt"></i> Redimensionar</button>
-            <span class="toolbar-divider"></span>
-            <button onclick="app.setAnnotationTool('highlight')" class="toolbar-btn"><i class="fas fa-highlighter"></i> Resaltar</button>
-            <button onclick="app.setAnnotationTool('underline')" class="toolbar-btn"><i class="fas fa-underline"></i> Subrayar</button>
-            <button onclick="app.setAnnotationTool('note')" class="toolbar-btn"><i class="fas fa-sticky-note"></i> Nota</button>
-            <button onclick="app.setAnnotationTool('draw')" class="toolbar-btn"><i class="fas fa-pencil-alt"></i> Dibujar</button>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
                 <label>Escala:</label>
                 <input type="range" id="doc-scale" min="25" max="300" value="100" class="toolbar-range">
                 <span id="scale-value" class="toolbar-value">100%</span>
             </div>
-            <button onclick="app.zoomIn()" class="toolbar-btn"><i class="fas fa-search-plus"></i> Zoom In</button>
-            <button onclick="app.zoomOut()" class="toolbar-btn"><i class="fas fa-search-minus"></i> Zoom Out</button>
-            <button onclick="app.fitToPage()" class="toolbar-btn"><i class="fas fa-compress"></i> Ajustar</button>
         `;
     }
 
-    // ===== CONFIGURACIÓN DE EVENTOS DE HERRAMIENTAS =====
     setupToolEvents(tool) {
         switch(tool) {
             case 'image':
@@ -808,14 +717,11 @@ class PizarraApp {
     setupImageToolEvents() {
         const rotationSlider = document.getElementById('image-rotation');
         const opacitySlider = document.getElementById('image-opacity');
-        const backgroundSelect = document.getElementById('image-blend-mode');
         
         if (rotationSlider) {
             rotationSlider.addEventListener('input', (e) => {
                 const rotationValue = document.getElementById('rotation-value');
-                if (rotationValue) {
-                    rotationValue.textContent = e.target.value + '°';
-                }
+                if (rotationValue) rotationValue.textContent = e.target.value + '°';
                 this.applyImageTransform('rotation', e.target.value);
             });
         }
@@ -823,16 +729,8 @@ class PizarraApp {
         if (opacitySlider) {
             opacitySlider.addEventListener('input', (e) => {
                 const opacityValue = document.getElementById('opacity-value');
-                if (opacityValue) {
-                    opacityValue.textContent = e.target.value + '%';
-                }
+                if (opacityValue) opacityValue.textContent = e.target.value + '%';
                 this.applyImageTransform('opacity', e.target.value);
-            });
-        }
-        
-        if (backgroundSelect) {
-            backgroundSelect.addEventListener('change', (e) => {
-                this.applyImageBackground(e.target.value);
             });
         }
     }
@@ -840,7 +738,6 @@ class PizarraApp {
     setupTextToolEvents() {
         const sizeSlider = document.getElementById('text-size');
         const colorPicker = document.getElementById('text-color');
-        const highlightPicker = document.getElementById('text-highlight');
         const fontSelect = document.getElementById('text-font');
         
         const update = (prop, val) => this.applyTextTransform(prop, val);
@@ -857,16 +754,6 @@ class PizarraApp {
             colorPicker.addEventListener('change', (e) => update('color', e.target.value));
         }
         
-        if (highlightPicker) {
-            highlightPicker.addEventListener('change', (e) => {
-                const element = this.elements.find(el => el.id === this.selectedElement.id);
-                if(element) {
-                    element.highlight = true; // Asegurarse de que el resaltado esté activo
-                    update('highlightColor', e.target.value);
-                }
-            });
-        }
-        
         if (fontSelect) {
             fontSelect.addEventListener('change', (e) => update('fontFamily', e.target.value));
         }
@@ -881,13 +768,11 @@ class PizarraApp {
     }
 
     setupDrawToolEvents() {
-        // Configurar eventos para la nueva herramienta de dibujo
         this.drawingTool.setupEvents();
     }
 
     setupDocumentToolEvents() {
         const scaleSlider = document.getElementById('doc-scale');
-        const rotationSlider = document.getElementById('doc-rotation');
         
         if (scaleSlider) {
             scaleSlider.addEventListener('input', (e) => {
@@ -895,31 +780,13 @@ class PizarraApp {
                 this.applyDocumentTransform('scale', e.target.value);
             });
         }
-        
-        if (rotationSlider) {
-            rotationSlider.addEventListener('input', (e) => {
-                document.getElementById('doc-rotation-value').textContent = e.target.value + '°';
-                this.applyDocumentTransform('rotation', e.target.value);
-            });
-        }
     }
 
-    // ===== MÉTODOS DE HERRAMIENTAS DE IMAGEN =====
-    setImageMode(mode) {
-        document.querySelectorAll('.tool-mode-btn').forEach(btn => btn.classList.remove('active'));
-        const btn = document.getElementById('img-' + mode + '-btn');
-        if (btn) {
-            btn.classList.add('active');
-        }
-        this.imageMode = mode;
-        this.showNotification(`Modo de imagen: ${mode}`);
-    }
-
+    // ===== MÉTODOS DE HERRAMIENTAS =====
     applyImageTransform(property, value) {
         if (this.selectedElement) {
-            // Obtener el ID del elemento seleccionado
             const elementId = this.selectedElement.id.replace('element-', '');
-            const element = this.elements.find(el => el.id === elementId);
+            const element = this.findElementById(elementId);
             
             if (element && element.type === 'image') {
                 if (property === 'rotation') {
@@ -928,576 +795,44 @@ class PizarraApp {
                 } else if (property === 'opacity') {
                     element.opacity = parseInt(value);
                     this.selectedElement.style.opacity = element.opacity / 100;
-                } else {
-                    element[property] = parseInt(value);
                 }
-                
-                // Actualizar visualmente
-                this.updateElementProperties(this.selectedElement, element);
             }
-        }
-    }
-
-    flipImageElement(elementId, direction) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element && element.type === 'image') {
-            const elementDiv = document.getElementById(`element-${elementId}`);
-            if (elementDiv) {
-                // Inicializar flipScale si no existe
-                if (!element.flipScale) {
-                    element.flipScale = { x: 1, y: 1 };
-                }
-                
-                // Cambiar el valor de escala
-                if (direction === 'horizontal') {
-                    element.flipScale.x *= -1;
-                } else if (direction === 'vertical') {
-                    element.flipScale.y *= -1;
-                }
-                
-                // Aplicar transformación a la imagen
-                const img = elementDiv.querySelector('img');
-                if (img) {
-                    img.style.transform = `scale(${element.flipScale.x}, ${element.flipScale.y})`;
-                }
-                
-                this.showNotification(`Imagen volteada ${direction === 'horizontal' ? 'horizontalmente' : 'verticalmente'}`);
-            }
-        }
-    }
-
-    toggleCropMode() {
-        if (this.selectedElement) {
-            const elementId = this.selectedElement.id.replace('element-', '');
-            const element = this.elements.find(el => el.id === elementId);
-            
-            if (element && element.type === 'image') {
-                const cropBtn = document.getElementById('crop-btn');
-                
-                if (this.cropMode) {
-                    // Desactivar modo recorte
-                    this.cropMode = false;
-                    this.selectedElement.classList.remove('crop-mode');
-                    if (cropBtn) cropBtn.classList.remove('active');
-                    this.showNotification('Modo recorte desactivado');
-                } else {
-                    // Activar modo recorte
-                    this.cropMode = true;
-                    this.selectedElement.classList.add('crop-mode');
-                    if (cropBtn) cropBtn.classList.add('active');
-                    this.showNotification('Modo recorte activado - Redimensiona la imagen para recortar');
-                }
-            } else {
-                this.showNotification('Selecciona una imagen primero');
-            }
-        } else {
-            this.showNotification('Selecciona una imagen para recortar');
-        }
-    }
-
-    applyImageBackground(background) {
-        if (this.selectedElement) {
-            const elementId = this.selectedElement.id.replace('element-', '');
-            const element = this.elements.find(el => el.id === elementId);
-            
-            if (element && element.type === 'image') {
-                element.background = background;
-                
-                // Aplicar fondo
-                if (background === 'white') {
-                    this.selectedElement.style.background = 'white';
-                } else if (background === 'black') {
-                    this.selectedElement.style.background = 'black';
-                } else if (background === 'blur') {
-                    this.selectedElement.style.backdropFilter = 'blur(10px)';
-                    this.selectedElement.style.background = 'rgba(255,255,255,0.3)';
-                } else {
-                    this.selectedElement.style.background = 'transparent';
-                    this.selectedElement.style.backdropFilter = 'none';
-                }
-                
-                this.showNotification(`Fondo aplicado: ${background}`);
-            }
-        }
-    }
-
-    // ===== MÉTODOS DE HERRAMIENTAS DE TEXTO =====
-    setTextMode(mode) {
-        this.textMode = mode;
-        const canvas = document.getElementById('canvas');
-        if (mode === 'create') {
-            canvas.style.cursor = 'crosshair';
-            this.showNotification('Haz clic y arrastra para crear un cuadro de texto.');
-        } else {
-            canvas.style.cursor = 'default';
-        }
-    }
-
-    setTextStyle(style) {
-        if (!this.selectedElement) {
-            this.showNotification('Selecciona un cuadro de texto para aplicar un estilo.');
-            return;
-        }
-        const elementId = this.selectedElement.id.replace('element-', '');
-        const { element } = this.findElementById(elementId);
-
-        if (element && element.type === 'text') {
-            const styleProp = style === 'bold' ? 'fontWeight' : (style === 'italic' ? 'fontStyle' : 'textDecoration');
-            const activeValue = style === 'bold' ? 'bold' : (style === 'italic' ? 'italic' : 'underline');
-            const defaultValue = style === 'bold' ? 'normal' : (style === 'italic' ? 'normal' : 'none');
-
-            if (element.styles[styleProp] === activeValue) {
-                element.styles[styleProp] = defaultValue;
-            } else {
-                element.styles[styleProp] = activeValue;
-            }
-            this.updateTextElement(this.selectedElement, element);
-        }
-    }
-
-    setTextAlign(align) {
-        if (!this.selectedElement) {
-            this.showNotification('Selecciona un cuadro de texto para cambiar la alineación.');
-            return;
-        }
-        const elementId = this.selectedElement.id.replace('element-', '');
-        const { element } = this.findElementById(elementId);
-
-        if (element && element.type === 'text') {
-            element.styles.textAlign = align;
-            this.updateTextElement(this.selectedElement, element);
-        }
-    }
-
-    setTextFont(font) {
-        if (!this.selectedElement) {
-            this.showNotification('Selecciona un cuadro de texto para cambiar la fuente.');
-            return;
-        }
-        const elementId = this.selectedElement.id.replace('element-', '');
-        const { element } = this.findElementById(elementId);
-
-        if (element && element.type === 'text') {
-            element.styles.fontFamily = font;
-            this.updateTextElement(this.selectedElement, element);
         }
     }
 
     applyTextTransform(property, value) {
         if (this.selectedElement) {
             const elementId = this.selectedElement.id;
-            const { element } = this.findElementById(elementId);
+            const element = this.findElementById(elementId);
             
             if (element && element.type === 'text') {
                 const textarea = document.querySelector(`#element-${elementId} .text-element`);
                 if (!textarea) return;
 
-                // Aplicar cambio de estilo
                 if (property === 'fontSize') {
                     element.styles.fontSize = value;
                 } else if (property === 'color') {
                     element.styles.color = value;
-                } else if (property === 'highlight') {
-                    element.styles.isHighlighted = !element.styles.isHighlighted;
-                    if (element.styles.isHighlighted && !element.styles.highlightColor) {
-                        element.styles.highlightColor = '#ffff00'; // Amarillo por defecto
-                    }
-                } else if (property === 'highlightColor') {
-                    element.styles.highlightColor = value;
-                    element.styles.isHighlighted = true; // Activar resaltado al elegir color
-                } else if (property === 'bold' || property === 'italic' || property === 'underline') {
-                    const styleMap = { bold: 'fontWeight', italic: 'fontStyle', underline: 'textDecoration' };
-                    const activeValue = { bold: 'bold', italic: 'italic', underline: 'underline' };
-                    const defaultValue = { bold: 'normal', italic: 'normal', underline: 'none' };
-
-                    const styleProp = styleMap[property];
-                    if (element.styles[styleProp] === activeValue[property]) {
-                        element.styles[styleProp] = defaultValue[property];
-                    } else {
-                        element.styles[styleProp] = activeValue[property];
-                    }
-                } else {
-                    element.styles[property] = value;
+                } else if (property === 'fontFamily') {
+                    element.styles.fontFamily = value;
+                } else if (property === 'bold') {
+                    element.styles.fontWeight = element.styles.fontWeight === 'bold' ? 'normal' : 'bold';
+                } else if (property === 'italic') {
+                    element.styles.fontStyle = element.styles.fontStyle === 'italic' ? 'normal' : 'italic';
+                } else if (property === 'underline') {
+                    element.styles.textDecoration = element.styles.textDecoration === 'underline' ? 'none' : 'underline';
+                } else if (property === 'textAlign') {
+                    element.styles.textAlign = value;
                 }
                 
                 this.updateTextElement(this.selectedElement, element);
-            }
-        }
-    }
-
-    // Nuevos métodos para aplicar estilos de texto
-    applyTextStyle(style) {
-        if (this.selectedElement) {
-            // Obtener el ID del elemento seleccionado
-            const elementId = this.selectedElement.id.replace('element-', '');
-            const { element } = this.findElementById(elementId);
-            
-            if (element && element.type === 'text') {
-                // Toggle del estilo
-                element[style] = !element[style];
-                
-                // Actualizar botón visual
-                const btn = document.querySelector(`[data-style="${style}"]`);
-                if (btn) {
-                    btn.classList.toggle('active', element[style]);
-                }
-                
-                this.updateTextElement(this.selectedElement, element);
-                this.showNotification(`${style} ${element[style] ? 'activado' : 'desactivado'}`);
-            } else {
-                this.showNotification('Selecciona un cuadro de texto para aplicar el estilo');
-            }
-        } else {
-            this.showNotification('Selecciona un cuadro de texto para aplicar el estilo');
-        }
-    }
-
-    applyTextAlign(align) {
-        if (this.selectedElement) {
-            // Obtener el ID del elemento seleccionado
-            const elementId = this.selectedElement.id.replace('element-', '');
-            const { element } = this.findElementById(elementId);
-            
-            if (element && element.type === 'text') {
-                element.textAlign = align;
-                
-                // Actualizar botones de alineación
-                document.querySelectorAll('.text-align-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                const activeBtn = document.querySelector(`[data-align="${align}"]`);
-                if (activeBtn) {
-                    activeBtn.classList.add('active');
-                }
-                
-                this.updateTextElement(this.selectedElement, element);
-                this.showNotification(`Alineación: ${align}`);
-            } else {
-                this.showNotification('Selecciona un cuadro de texto para cambiar la alineación');
-            }
-        } else {
-            this.showNotification('Selecciona un cuadro de texto para cambiar la alineación');
-        }
-    }
-
-    toggleHighlight() {
-        if (!this.selectedElement) {
-            this.showNotification('Selecciona un cuadro de texto para aplicar resaltado.');
-            return;
-        }
-
-        const elementId = this.selectedElement.id.replace('element-', '');
-        const { element } = this.findElementById(elementId);
-
-        if (element && element.type === 'text') {
-            element.styles.isHighlighted = !element.styles.isHighlighted;
-
-            // Si se activa el resaltado, tomar el color del picker
-            if (element.styles.isHighlighted) {
-                const highlightPicker = document.getElementById('text-highlight');
-                if (highlightPicker) {
-                    element.styles.highlightColor = highlightPicker.value;
-                }
-            }
-
-            this.updateTextElement(this.selectedElement, element);
-        }
-    }
-
-    updateTextElement(elementDiv, data) {
-        const textArea = elementDiv.querySelector('textarea');
-        if (textArea) {
-            textArea.value = data.text;
-            textArea.style.fontFamily = data.styles.fontFamily || 'Arial';
-            textArea.style.fontSize = data.styles.fontSize || '16px';
-            textArea.style.color = data.styles.color || '#000000';
-            textArea.style.backgroundColor = data.styles.isHighlighted ? data.styles.highlightColor : 'transparent';
-            textArea.style.fontWeight = data.styles.fontWeight || 'normal';
-            textArea.style.fontStyle = data.styles.fontStyle || 'normal';
-            textArea.style.textDecoration = data.styles.textDecoration || 'none';
-            textArea.style.textAlign = data.styles.textAlign || 'left';
-        }
-    }
-
-    handleTextInput(e, elementId) {
-        const textarea = e.target;
-        const { element } = this.findElementById(elementId);
-        
-        if (element) {
-            element.text = textarea.value;
-            this.autoResizeTextarea(textarea, element);
-            
-            // Actualizar altura del elemento si es necesario
-            if (textarea.scrollHeight > element.height) {
-                element.height = textarea.scrollHeight;
-                const elementDiv = document.getElementById(`element-${elementId}`);
-                if (elementDiv) {
-                    elementDiv.style.height = textarea.scrollHeight + 'px';
-                }
-            }
-        }
-    }
-
-    saveTextContent(elementId, content) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element) {
-            element.text = content;
-            element.isEditing = false;
-            // Permitir cuadros de texto vacíos - NO eliminar
-        }
-    }
-
-    // ===== MÉTODOS DE HERRAMIENTAS DE DIBUJO =====
-    // Los métodos de dibujo ahora se manejan a través de la clase DrawingTool
-
-    // ===== MÉTODOS DE HERRAMIENTAS DE DOCUMENTO =====
-    setDocumentMode(mode) {
-        document.querySelectorAll('.tool-mode-btn').forEach(btn => btn.classList.remove('active'));
-        const btn = document.getElementById('doc-' + mode + '-btn');
-        if (btn) {
-            btn.classList.add('active');
-        }
-        this.documentMode = mode;
-        this.showNotification(`Modo de documento: ${mode}`);
-    }
-
-    setAnnotationTool(tool) {
-        document.querySelectorAll('.annotation-btn').forEach(btn => btn.classList.remove('active'));
-        const btn = document.getElementById(tool + '-btn');
-        if (btn) {
-            btn.classList.add('active');
-        }
-        this.annotationTool = tool;
-        this.showNotification(`Herramienta de anotación: ${tool}`);
-        
-        // Activar modo de anotación si hay un documento seleccionado
-        if (this.selectedElement) {
-            const element = this.elements.find(el => el.id === this.selectedElement.id);
-            if (element && element.type === 'document') {
-                this.activateDocumentAnnotation(element, tool);
-            }
-        }
-    }
-
-    activateDocumentAnnotation(element, tool) {
-        const documentDiv = this.selectedElement.querySelector('div[style*="position: absolute; top: 30px"]');
-        if (documentDiv) {
-            // Agregar overlay para anotaciones
-            let annotationOverlay = documentDiv.querySelector('.annotation-overlay');
-            if (!annotationOverlay) {
-                annotationOverlay = document.createElement('div');
-                annotationOverlay.className = 'annotation-overlay';
-                annotationOverlay.style.cssText = `
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: auto;
-                    z-index: 10;
-                `;
-                documentDiv.appendChild(annotationOverlay);
-            }
-
-            // Configurar eventos según la herramienta
-            switch(tool) {
-                case 'highlight':
-                    this.setupHighlightMode(annotationOverlay, element);
-                    break;
-                case 'underline':
-                    this.setupUnderlineMode(annotationOverlay, element);
-                    break;
-                case 'note':
-                    this.setupNoteMode(annotationOverlay, element);
-                    break;
-                case 'draw':
-                    this.setupDocumentDrawMode(annotationOverlay, element);
-                    break;
-            }
-        }
-    }
-
-    setupHighlightMode(overlay, element) {
-        overlay.style.cursor = 'crosshair';
-        overlay.onmousedown = (e) => {
-            this.startHighlight(e, overlay, element);
-        };
-    }
-
-    setupUnderlineMode(overlay, element) {
-        overlay.style.cursor = 'crosshair';
-        overlay.onmousedown = (e) => {
-            this.startUnderline(e, overlay, element);
-        };
-    }
-
-    setupNoteMode(overlay, element) {
-        overlay.style.cursor = 'pointer';
-        overlay.onclick = (e) => {
-            this.addNote(e, overlay, element);
-        };
-    }
-
-    setupDocumentDrawMode(overlay, element) {
-        overlay.style.cursor = 'crosshair';
-        overlay.onmousedown = (e) => {
-            this.startDocumentDrawing(e, overlay, element);
-        };
-    }
-
-    startHighlight(e, overlay, element) {
-        const rect = overlay.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        const highlight = document.createElement('div');
-        highlight.style.cssText = `
-            position: absolute;
-            left: ${x}px;
-            top: ${y}px;
-            width: 100px;
-            height: 20px;
-            background: rgba(255, 255, 0, 0.3);
-            border: 1px solid #ffeb3b;
-            pointer-events: none;
-            z-index: 5;
-        `;
-        overlay.appendChild(highlight);
-        
-        // Agregar a las anotaciones del elemento
-        element.annotations.push({
-            type: 'highlight',
-            x: x,
-            y: y,
-            width: 100,
-            height: 20,
-            id: Date.now().toString()
-        });
-    }
-
-    startUnderline(e, overlay, element) {
-        const rect = overlay.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        const underline = document.createElement('div');
-        underline.style.cssText = `
-            position: absolute;
-            left: ${x}px;
-            top: ${y}px;
-            width: 100px;
-            height: 2px;
-            background: #ff0000;
-            pointer-events: none;
-            z-index: 5;
-        `;
-        overlay.appendChild(underline);
-        
-        // Agregar a las anotaciones del elemento
-        element.annotations.push({
-            type: 'underline',
-            x: x,
-            y: y,
-            width: 100,
-            height: 2,
-            id: Date.now().toString()
-        });
-    }
-
-    addNote(e, overlay, element) {
-        const rect = overlay.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        const noteText = prompt('Ingresa tu nota:');
-        if (noteText) {
-            const note = document.createElement('div');
-            note.style.cssText = `
-                position: absolute;
-                left: ${x}px;
-                top: ${y}px;
-                background: #ffffcc;
-                border: 1px solid #ffcc00;
-                padding: 5px;
-                font-size: 12px;
-                max-width: 150px;
-                word-wrap: break-word;
-                z-index: 5;
-                cursor: pointer;
-            `;
-            note.textContent = noteText;
-            overlay.appendChild(note);
-            
-            // Agregar a las anotaciones del elemento
-            element.annotations.push({
-                type: 'note',
-                x: x,
-                y: y,
-                text: noteText,
-                id: Date.now().toString()
-            });
-        }
-    }
-
-    startDocumentDrawing(e, overlay, element) {
-        // Similar al dibujo normal pero en el contexto del documento
-        this.isDrawing = true;
-        this.drawingPath = [];
-        const rect = overlay.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        this.drawingPath.push(`M${x},${y}`);
-        this.startDrawingPoint = { x, y };
-        this.lastDrawingPoint = { x, y };
-    }
-
-    prevPage() {
-        this.showNotification('Página anterior (funcionalidad en desarrollo)');
-    }
-
-    nextPage() {
-        this.showNotification('Página siguiente (funcionalidad en desarrollo)');
-    }
-
-    zoomIn() {
-        if (this.selectedElement) {
-            const element = this.elements.find(el => el.id === this.selectedElement.id);
-            if (element && element.type === 'document') {
-                element.width = Math.min(element.width * 1.2, 1200);
-                element.height = Math.min(element.height * 1.2, 1600);
-                this.updateElementProperties(this.selectedElement, element);
-                this.showNotification('Zoom aumentado');
-            }
-        }
-    }
-
-    zoomOut() {
-        if (this.selectedElement) {
-            const element = this.elements.find(el => el.id === this.selectedElement.id);
-            if (element && element.type === 'document') {
-                element.width = Math.max(element.width * 0.8, 300);
-                element.height = Math.max(element.height * 0.8, 400);
-                this.updateElementProperties(this.selectedElement, element);
-                this.showNotification('Zoom reducido');
-            }
-        }
-    }
-
-    fitToPage() {
-        if (this.selectedElement) {
-            const element = this.elements.find(el => el.id === this.selectedElement.id);
-            if (element && element.type === 'document') {
-                element.width = 600;
-                element.height = 800;
-                this.updateElementProperties(this.selectedElement, element);
-                this.showNotification('Documento ajustado a página');
             }
         }
     }
 
     applyDocumentTransform(property, value) {
         if (this.selectedElement) {
-            const element = this.elements.find(el => el.id === this.selectedElement.id);
+            const element = this.findElementById(this.selectedElement.id);
             if (element && element.type === 'document') {
                 element[property] = property === 'scale' ? parseInt(value) : parseInt(value);
                 this.renderElement(element);
@@ -1517,6 +852,7 @@ class PizarraApp {
             height: 200,
             rotation: 0,
             opacity: 100,
+            layer: this.currentLayer
         };
         
         const activeLayer = this.getActiveLayer();
@@ -1531,7 +867,7 @@ class PizarraApp {
             id: Date.now().toString(),
             type: 'text',
             text: 'Escribe aquí...',
-            x: Math.max(0, x - 100), // Centrar el cuadro en el clic
+            x: Math.max(0, x - 100),
             y: Math.max(0, y - 25),
             width: 200,
             height: 50,
@@ -1539,16 +875,14 @@ class PizarraApp {
                 fontSize: '16px',
                 fontFamily: 'Arial',
                 color: '#000000',
-                highlightColor: '#ffff00',
-                isHighlighted: false,
                 fontWeight: 'normal',
                 fontStyle: 'normal',
                 textDecoration: 'none',
                 textAlign: 'left'
             },
             rotation: 0,
-            layer: 0,
-            isEditing: true // Marcar como en edición
+            layer: this.currentLayer,
+            isEditing: true
         };
         
         const activeLayer = this.getActiveLayer();
@@ -1557,7 +891,6 @@ class PizarraApp {
         }
         this.renderElement(element);
         
-        // Seleccionar y enfocar el elemento recién creado
         setTimeout(() => {
             const elementDiv = document.getElementById(`element-${element.id}`);
             if (elementDiv) {
@@ -1565,7 +898,7 @@ class PizarraApp {
                 const textarea = elementDiv.querySelector('.text-element');
                 if (textarea) {
                     textarea.focus();
-                    textarea.select(); // Seleccionar todo el texto
+                    textarea.select();
                 }
             }
         }, 100);
@@ -1574,22 +907,15 @@ class PizarraApp {
     }
 
     createNewTextBox() {
-        // Crear cuadro de texto en el centro del canvas
         const canvas = document.getElementById('canvas');
         const canvasContent = canvas.querySelector('.canvas-content');
         const rect = canvasContent.getBoundingClientRect();
         
-        // Posición aleatoria para evitar superposición
         const randomOffset = Math.floor(Math.random() * 100) - 50;
         const centerX = rect.width / 2 + randomOffset;
         const centerY = rect.height / 2 + randomOffset;
         
         this.createTextBoxAtPosition(centerX, centerY);
-    }
-
-    addTextElement() {
-        // Método legacy - ahora redirige al nuevo sistema
-        this.createNewTextBox();
     }
 
     addDrawingElement(elementData) {
@@ -1601,7 +927,6 @@ class PizarraApp {
     }
 
     addDocumentElement(src, type, name) {
-        // Calcular posición centrada en el canvas
         const canvas = document.getElementById('canvas');
         const canvasRect = canvas.getBoundingClientRect();
         const centerX = Math.max(50, (canvasRect.width - 600) / 2);
@@ -1619,10 +944,8 @@ class PizarraApp {
             height: 800,
             rotation: 0,
             opacity: 100,
-            layer: 0,
-            annotations: [],
-            scale: 100,
-            flipScale: { x: 1, y: 1 }
+            layer: this.currentLayer,
+            scale: 100
         };
         
         const activeLayer = this.getActiveLayer();
@@ -1633,39 +956,7 @@ class PizarraApp {
         this.showNotification(`Documento "${name}" cargado correctamente`);
     }
 
-    async renderDocument(element, elementDiv) {
-        elementDiv.innerHTML = ''; // Limpiar contenedor
-        try {
-            const pdfjsLib = window.pdfjsLib;
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
-
-            const loadingTask = pdfjsLib.getDocument({ data: element.src });
-            const pdf = await loadingTask.promise;
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.5 });
-                
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                canvas.style.marginBottom = '10px';
-
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport
-                };
-                
-                await page.render(renderContext).promise;
-                elementDiv.appendChild(canvas);
-            }
-        } catch (error) {
-            console.error('Error al renderizar el documento PDF:', error);
-            elementDiv.textContent = 'Error al cargar el documento.';
-        }
-    }
-
+    // ===== RENDERIZADO DE ELEMENTOS =====
     renderElement(element) {
         const canvas = document.getElementById('canvas');
         const canvasContent = canvas.querySelector('.canvas-content');
@@ -1673,31 +964,9 @@ class PizarraApp {
         const existingElement = document.getElementById(`element-${element.id}`);
         if (existingElement) {
             this.updateElementProperties(existingElement, element);
-            
-            if (element.type === 'drawing') {
-                const svg = existingElement.querySelector('svg');
-                if (svg) {
-                    svg.setAttribute('viewBox', `0 0 ${element.width} ${element.height}`);
-                }
-            }
             return;
         }
         
-        // Fix: Ensure viewBox always gets numeric values, defaulting to 1 if missing
-        if (element.type === 'drawing') {
-            if (!Number.isFinite(element.width) || element.width <= 0) element.width = 1;
-            if (!Number.isFinite(element.height) || element.height <= 0) element.height = 1;
-        }
-        // Sanitiza puntos de dibujo si es necesario
-        if (element.type === 'drawing' && Array.isArray(element.points)) {
-            element.points = element.points.filter(
-                pt => Number.isFinite(pt.x) && Number.isFinite(pt.y)
-            );
-            // Si todos los puntos son inválidos, no renderices nada
-            if (element.points.length === 0) {
-                return;
-            }
-        }
         const elementDiv = this.createElementDiv(element);
         if (elementDiv) {
             canvasContent.appendChild(elementDiv);
@@ -1716,56 +985,34 @@ class PizarraApp {
         elementDiv.style.transform = `rotate(${element.rotation || 0}deg)`;
         elementDiv.style.opacity = (element.opacity || 100) / 100;
         elementDiv.style.zIndex = element.layer || 0;
-        
-        // Para elementos de dibujo, eliminar estilos que causan bordes
-        if (element.type === 'drawing') {
-            elementDiv.style.border = 'none';
-            elementDiv.style.boxShadow = 'none';
-            elementDiv.style.outline = 'none';
-            elementDiv.style.background = 'transparent';
-            elementDiv.style.pointerEvents = 'none'; // Evitar interacción
-        }
 
-        // Agregar event listeners para interacción (excepto para dibujos)
         if (element.type !== 'drawing' && element.type !== 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
             elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
         } else if (element.type === 'text') {
-            // Para textos, solo permitir selección, NO arrastre automático
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
         }
 
         switch(element.type) {
-        case 'image':
-            const flipScaleX = element.flipScale?.x || 1;
-            const flipScaleY = element.flipScale?.y || 1;
-            elementDiv.innerHTML = `
-                <img src="${element.src}" style="width: 100%; height: 100%; object-fit: contain; transform: scale(${flipScaleX}, ${flipScaleY});">
-                <div class="image-controls">
-                    <button class="image-control-btn" onclick="event.stopPropagation(); app.flipImageElement('${element.id}', 'horizontal')" title="Voltear horizontal">
-                        ↔
-                    </button>
-                    <button class="image-control-btn" onclick="event.stopPropagation(); app.flipImageElement('${element.id}', 'vertical')" title="Voltear vertical">
-                        ↕
-                    </button>
-                    <button class="image-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">
-                        ×
-                    </button>
-                </div>
-            `;
-            break;
+            case 'image':
+                elementDiv.innerHTML = `
+                    <img src="${element.src}" style="width: 100%; height: 100%; object-fit: contain;">
+                    <div class="image-controls">
+                        <button class="image-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">×</button>
+                    </div>
+                `;
+                break;
             case 'text':
-                const backgroundStyle = element.highlight ? `background: ${element.highlightColor || '#ffff00'};` : '';
                 elementDiv.innerHTML = `
                     <div class="text-box-container">
                         <textarea class="text-element" 
-                                  style="font-family: ${element.fontFamily || 'Arial'}; 
-                                         font-size: ${element.fontSize || 16}px; 
-                                         color: ${element.color || '#000000'}; 
-                                         font-weight: ${element.bold ? 'bold' : 'normal'}; 
-                                         font-style: ${element.italic ? 'italic' : 'normal'}; 
-                                         text-decoration: ${element.underline ? 'underline' : 'none'}; 
-                                         text-align: ${element.textAlign || 'left'};
+                                  style="font-family: ${element.styles.fontFamily || 'Arial'}; 
+                                         font-size: ${element.styles.fontSize || '16px'}; 
+                                         color: ${element.styles.color || '#000000'}; 
+                                         font-weight: ${element.styles.fontWeight || 'normal'}; 
+                                         font-style: ${element.styles.fontStyle || 'normal'}; 
+                                         text-decoration: ${element.styles.textDecoration || 'none'}; 
+                                         text-align: ${element.styles.textAlign || 'left'};
                                          width: 100%; 
                                          height: 100%; 
                                          border: none; 
@@ -1774,65 +1021,27 @@ class PizarraApp {
                                          background: transparent;
                                          padding: 8px;
                                          box-sizing: border-box;
-                                         overflow: hidden;
-                                         ${backgroundStyle}">${element.text || ''}</textarea>
+                                         overflow: hidden;">${element.text || ''}</textarea>
                         <div class="text-controls">
-                            <button class="text-control-btn" onclick="event.stopPropagation(); app.enableTextMove('${element.id}')" title="Mover">
-                                ✋
-                            </button>
-                            <button class="text-control-btn" onclick="event.stopPropagation(); app.rotateTextElement('${element.id}', 90)" title="Rotar 90°">
-                                ↻
-                            </button>
-                            <button class="text-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">
-                                ×
-                            </button>
+                            <button class="text-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">×</button>
                         </div>
                     </div>
                 `;
                 
-                // Configurar eventos para el textarea
                 setTimeout(() => {
                     const textarea = elementDiv.querySelector('.text-element');
                     if (textarea) {
-                        // Hacer que el textarea siempre sea editable
                         textarea.removeAttribute('readonly');
                         textarea.removeAttribute('disabled');
                         
-                        // Auto-resize del textarea
                         textarea.addEventListener('input', (e) => {
                             this.handleTextInput(e, element.id);
                         });
                         
-                        // Guardar contenido al perder el foco (pero NO eliminar)
                         textarea.addEventListener('blur', (e) => {
-                            const el = this.elements.find(el => el.id === element.id);
+                            const el = this.findElementById(element.id);
                             if (el) {
                                 el.text = e.target.value;
-                            }
-                        });
-                        
-                        // Prevenir que el evento de clic y mousedown se propaguen
-                        textarea.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                        });
-                        
-                        textarea.addEventListener('mousedown', (e) => {
-                            e.stopPropagation();
-                        });
-                        
-                        // Enfocar el textarea al hacer doble clic en el contenedor
-                        elementDiv.addEventListener('dblclick', (e) => {
-                            if (!textarea.contains(e.target)) {
-                                textarea.focus();
-                                textarea.select();
-                            }
-                        });
-                        
-                        // Manejar Enter para nuevas líneas
-                        textarea.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                // Permitir Enter para nuevas líneas
-                                return true;
                             }
                         });
                     }
@@ -1842,30 +1051,34 @@ class PizarraApp {
                 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 svg.setAttribute('width', '100%');
                 svg.setAttribute('height', '100%');
-                // Fix: Ensure viewBox has valid numeric values, fallback to 1 if missing
-                const vbWidth = Number.isFinite(element.width) && element.width > 0 ? element.width : 1;
-                const vbHeight = Number.isFinite(element.height) && element.height > 0 ? element.height : 1;
-                svg.setAttribute('viewBox', `0 0 ${vbWidth} ${vbHeight}`);
+                svg.setAttribute('viewBox', `0 0 ${element.width || 1} ${element.height || 1}`);
                 
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                // Validate the path before setting it to prevent "MNaN,NaN" type errors
-                if (typeof element.path === 'string' && /^M[-\d.,\sLQCTSAZmlqctsaz]*$/.test(element.path) && !element.path.includes('NaN')) {
+                if (typeof element.path === 'string' && !element.path.includes('NaN')) {
                     path.setAttribute('d', element.path);
-                } else {
-                    path.setAttribute('d', ''); // Prevent invalid path
+                    path.setAttribute('data-id', element.id);
+                    this.applyDrawingStyle(path, element.style);
+                    svg.appendChild(path);
                 }
-                path.setAttribute('data-id', element.id);
-                this.applyDrawingStyle(path, element.style);
                 
-                svg.appendChild(path);
                 elementDiv.appendChild(svg);
                 break;
             case 'document':
-                this.renderDocument(element, elementDiv);
+                elementDiv.innerHTML = `
+                    <div style="width: 100%; height: 100%; background: #f5f5f5; display: flex; align-items: center; justify-content: center;">
+                        <div style="text-align: center; color: #666;">
+                            <div style="font-size: 48px; margin-bottom: 10px;"><i class="fas fa-file"></i></div>
+                            <h3>${element.name}</h3>
+                            <p>${element.fileType}</p>
+                        </div>
+                    </div>
+                    <div class="image-controls">
+                        <button class="image-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">×</button>
+                    </div>
+                `;
                 break;
         }
 
-        // Agregar handles de redimensionamiento solo para elementos que no sean dibujos
         if (element.type !== 'drawing') {
             this.addResizeHandles(elementDiv);
         }
@@ -1895,197 +1108,22 @@ class PizarraApp {
         elementDiv.style.zIndex = element.layer || 0;
     }
 
-    addResizeHandles(element) {
-        const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-        handles.forEach(pos => {
-            const handle = document.createElement('div');
-            handle.className = `resize-handle ${pos}`;
-            element.appendChild(handle);
-            this.initResize(element, handle);
-        });
-    }
+    drawPathOnCanvas(element) {
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (!drawingLayer) return;
 
-    initResize(element, handle) {
-        handle.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            this.startResize(e, element, handle);
-        });
-    }
-    
-    startResize(e, element, handle) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const { element: elementData } = this.findElementById(element.id);
-        const initialRect = element.getBoundingClientRect();
-        const startX = e.clientX;
-        const startY = e.clientY;
-
-        const handleMouseMove = (moveEvent) => {
-            const dx = moveEvent.clientX - startX;
-            const dy = moveEvent.clientY - startY;
-
-            let newWidth = initialRect.width;
-            let newHeight = initialRect.height;
-            let newLeft = initialRect.left;
-            let newTop = initialRect.top;
-
-            if (handle.classList.contains('top-right')) {
-                newWidth += dx;
-                newHeight -= dy;
-                newTop += dy;
-            } else if (handle.classList.contains('bottom-right')) {
-                newWidth += dx;
-                newHeight += dy;
-            } else if (handle.classList.contains('bottom-left')) {
-                newWidth -= dx;
-                newHeight += dy;
-                newLeft += dx;
-            } else if (handle.classList.contains('top-left')) {
-                newWidth -= dx;
-                newHeight -= dy;
-                newLeft += dx;
-                newTop += dy;
-            }
-
-            element.style.width = `${Math.max(30, newWidth)}px`;
-            element.style.height = `${Math.max(30, newHeight)}px`;
-            element.style.left = `${newLeft}px`;
-            element.style.top = `${newTop}px`;
-        };
-
-        const handleMouseUp = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            this.updateElementAfterResize(element, elementData);
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    updateElementAfterResize(element, elementData) {
-        elementData.x = parseFloat(element.style.left);
-        elementData.y = parseFloat(element.style.top);
-        elementData.width = parseFloat(element.style.width);
-        elementData.height = parseFloat(element.style.height);
-        this.renderElement(elementData); // Re-render to confirm changes
-    }
-
-    updateElementData(element) {
-        const elementId = element.id;
-        const elementData = this.elements.find(el => el.id === elementId);
-        if (elementData) {
-            elementData.x = parseInt(element.style.left);
-            elementData.y = parseInt(element.style.top);
-            elementData.width = parseInt(element.style.width);
-            elementData.height = parseInt(element.style.height);
-        }
-    }
-
-    renderDocumentContent(element) {
-        if (element.fileType === 'application/pdf') {
-            return `
-                <div style="width: 100%; height: 100%; position: relative; background: #f5f5f5;">
-                    <iframe src="${element.src}" style="width: 100%; height: 100%; border: none;" type="application/pdf"></iframe>
-                    <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px;">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </div>
-                </div>
-            `;
-        } else if (
-            element.fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-            element.fileType === 'application/msword' ||
-            (element.name && element.name.match(/\.docx?$/i))
-        ) {
-            // If src is a URL (not base64), use Google Docs Viewer
-            if (element.src.startsWith('http') || element.src.startsWith('https')) {
-                return `
-                    <div style="width: 100%; height: 100%; position: relative; background: #f5f5f5;">
-                        <iframe src="https://docs.google.com/gview?url=${encodeURIComponent(element.src)}&embedded=true" style="width: 100%; height: 100%; border: none;"></iframe>
-                        <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px;">
-                            <i class="fas fa-file-word"></i> DOCX
-                        </div>
-                    </div>
-                `;
-            } else if (element.src.startsWith('data:')) {
-                // Base64 file, cannot preview, offer download
-                return `
-                    <div style="padding: 20px; height: 100%; overflow-y: auto; background: white;">
-                        <div style="text-align: center; color: #666; margin-top: 50px;">
-                            <div style="font-size: 48px; margin-bottom: 20px; color: #29b6f6;"><i class="fas fa-file-word"></i></div>
-                            <h3>Documento Word</h3>
-                            <p>${element.name}</p>
-                            <p style="font-size: 14px; margin-top: 20px;">No es posible previsualizar archivos Word locales.<br>Descárgalo para abrirlo en tu ordenador.</p>
-                            <a href="${element.src}" download="${element.name}" style="background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 10px; font-weight: 500; box-shadow: 0 2px 8px rgba(79, 195, 247, 0.3); text-decoration: none; display: inline-block;">
-                                <i class="fas fa-download"></i> Descargar
-                            </a>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Fallback
-                return `
-                    <div style="padding: 20px; height: 100%; overflow-y: auto; background: white;">
-                        <div style="text-align: center; color: #666; margin-top: 50px;">
-                            <div style="font-size: 48px; margin-bottom: 20px; color: #29b6f6;"><i class="fas fa-file-word"></i></div>
-                            <h3>Documento Word</h3>
-                            <p>${element.name}</p>
-                            <p style="font-size: 14px; margin-top: 20px;">No es posible previsualizar este archivo.</p>
-                        </div>
-                    </div>
-                `;
-            }
-        } else {
-            return `
-                <div style="padding: 20px; height: 100%; overflow-y: auto; background: white;">
-                    <div style="text-align: center; color: #666; margin-top: 50px;">
-                        <div style="font-size: 48px; margin-bottom: 20px; color: #29b6f6;"><i class="fas fa-file-alt"></i></div>
-                        <h3>Documento</h3>
-                        <p>${element.name}</p>
-                        <p style="font-size: 14px; margin-top: 20px;">Tipo de archivo: ${element.fileType}</p>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    loadCanvasElements(elements) {
-        // Optimización: solo limpiar y recargar si es necesario
-        if (JSON.stringify(this.elements) !== JSON.stringify(elements)) {
-            this.clearCanvas();
-            this.elements = elements || [];
-            
-            if (this.elements.length > 0) {
-                // Usar DocumentFragment para mejor rendimiento
-                const canvas = document.getElementById('canvas');
-                const canvasContent = canvas.querySelector('.canvas-content');
-                const fragment = document.createDocumentFragment();
-                
-                this.elements.forEach(element => {
-                    const elementDiv = this.createElementDiv(element);
-                    if (elementDiv) {
-                        fragment.appendChild(elementDiv);
-                    }
-                });
-                
-                canvasContent.appendChild(fragment);
-            }
-        }
-    }
-
-    clearCanvas() {
-        const canvas = document.getElementById('canvas');
-        const canvasContent = canvas.querySelector('.canvas-content');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         
-        // Optimización: usar innerHTML para limpiar más rápido
-        canvasContent.innerHTML = '<span class="canvas-title">PIZARRA</span>';
-        this.elements = [];
+        if (typeof element.path === 'string' && !element.path.includes('NaN')) {
+            path.setAttribute('d', element.path);
+            path.setAttribute('data-id', element.id);
+            this.applyDrawingStyle(path, element.style);
+            drawingLayer.appendChild(path);
+        }
     }
 
     // ===== INTERACCIÓN CON EL CANVAS =====
     handleCanvasClick(e) {
-        // Si no se hizo clic en un elemento, deseleccionar
         if (e.target.classList.contains('canvas-content') || e.target.id === 'canvas') {
             this.deselectElement();
         }
@@ -2097,14 +1135,14 @@ class PizarraApp {
             this.showNotification("La capa activa está bloqueada.");
             return;
         }
-        // Iniciar dibujo si la herramienta está seleccionada
+        
         if (this.selectedTool === 'draw') {
             this.isDrawing = true;
             this.drawingTool.startDrawing(e);
             return;
         }
 
-        const elementDiv = e.target.closest('.element');
+        const elementDiv = e.target.closest('.canvas-element');
         if (elementDiv) {
             this.selectElement(e, elementDiv);
             this.dragStart.x = e.clientX;
@@ -2125,62 +1163,6 @@ class PizarraApp {
             e.preventDefault();
             this.drawingTool.finishDrawing();
         }
-    }
-
-    // ===== MÉTODOS DE DIBUJO OPTIMIZADO ELIMINADOS - REEMPLAZADOS POR DrawingTool =====
-
-    // ===== MÉTODOS DE DIBUJO ELIMINADOS - REEMPLAZADOS POR DrawingTool =====
-
-    // ===== MÉTODOS DE OPTIMIZACIÓN =====
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    throttle(func, limit) {
-        let inThrottle;
-        return function() {
-            const args = arguments;
-            const context = this;
-            if (!inThrottle) {
-                func.apply(context, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        };
-    }
-
-    // Limpiar recursos para mejorar rendimiento
-    cleanup() {
-        // Limpiar animaciones pendientes
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-        
-        // Limpiar timeouts
-        if (this.notificationTimeout) {
-            clearTimeout(this.notificationTimeout);
-            this.notificationTimeout = null;
-        }
-        
-        // Limpiar elementos temporales
-        const tempSvg = document.getElementById('temp-drawing-svg');
-        if (tempSvg) {
-            tempSvg.remove();
-        }
-        
-        // Limpiar elementos de procesamiento
-        document.querySelectorAll('.processing').forEach(el => {
-            el.classList.remove('processing');
-        });
     }
 
     startDrag(e, element) {
@@ -2215,410 +1197,28 @@ class PizarraApp {
         if (this.selectedTool === 'draw') return;
         if (e) e.stopPropagation();
         
-        // Optimización: solo cambiar clases si es necesario
         if (this.selectedElement !== element) {
             this.deselectElement();
             
-            // Seleccionar nuevo elemento
             element.classList.add('selected');
             this.selectedElement = element;
             this.addResizeHandles(element);
-            
-            // Si es un elemento de texto, actualizar la barra de herramientas
-            const { element: elementData } = this.findElementById(element.id);
-            if (elementData && elementData.type === 'text') {
-                this.updateTextToolbarForElement(elementData);
-            }
         }
     }
 
-    updateTextToolbarForElement(element) {
-        const toolbarContent = document.querySelector('#toolbar .toolbar-content');
-        if (!toolbarContent) return;
-        
-        toolbarContent.innerHTML = `
-            <div class="toolbar-group">
-                <button class="text-style-btn" data-style="bold"><i class="fas fa-bold"></i></button>
-                <button class="text-style-btn" data-style="italic"><i class="fas fa-italic"></i></button>
-                <button class="text-style-btn" data-style="underline"><i class="fas fa-underline"></i></button>
-            </div>
-            <div class="toolbar-group">
-                <button class="text-align-btn" data-align="left"><i class="fas fa-align-left"></i></button>
-                <button class="text-align-btn" data-align="center"><i class="fas fa-align-center"></i></button>
-                <button class="text-align-btn" data-align="right"><i class="fas fa-align-right"></i></button>
-            </div>
-            <div class="toolbar-group">
-                <select id="font-selector">
-                    <option value="Arial">Arial</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                </select>
-            </div>
-            <div class="toolbar-group">
-                <input type="range" id="size-slider" min="8" max="72" value="16">
-                <span id="size-value">16px</span>
-            </div>
-            <div class="toolbar-group">
-                <input type="color" id="color-picker" title="Color de fuente">
-                <input type="color" id="highlight-picker" title="Color de resaltado">
-                <button id="highlight-toggle"><i class="fas fa-highlighter"></i></button>
-            </div>
-        `;
-        
-        // Actualizar controles de la barra de herramientas
-        const sizeSlider = document.getElementById('size-slider');
-        if (sizeSlider && element.fontSize) {
-            sizeSlider.value = element.fontSize;
-        }
-        
-        const colorPicker = document.getElementById('color-picker');
-        if (colorPicker && element.color) {
-            colorPicker.value = element.color;
-        }
-        
-        const highlightPicker = document.getElementById('highlight-picker');
-        if (highlightPicker && element.highlightColor) {
-            highlightPicker.value = element.highlightColor;
-        }
-        
-        const fontSelect = document.getElementById('font-selector');
-        if (fontSelect && element.fontFamily) {
-            fontSelect.value = element.fontFamily;
-        }
-        
-        const sizeValue = document.getElementById('size-value');
-        if (sizeValue && element.fontSize) {
-            sizeValue.textContent = element.fontSize + 'px';
-        }
-        
-        // Actualizar botones de estilo
-        document.querySelectorAll('.text-style-btn').forEach(btn => {
-            const style = btn.getAttribute('data-style');
-            btn.classList.toggle('active', element[style] || false);
-        });
-        
-        // Actualizar botones de alineación
-        document.querySelectorAll('.text-align-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        const alignBtn = document.querySelector(`[data-align="${element.textAlign || 'left'}"]`);
-        if (alignBtn) {
-            alignBtn.classList.add('active');
-        }
-    }
-
-    updateElementPosition(element) {
-        const elementId = element.id;
-        const elementData = this.elements.find(el => el.id === elementId);
-        if (elementData) {
-            elementData.x = parseInt(element.style.left);
-            elementData.y = parseInt(element.style.top);
-        }
-    }
-
-    // ===== UPLOAD DE ARCHIVOS =====
-    triggerImageUpload() {
-        document.getElementById('file-input-img').click();
-    }
-
-    triggerDocumentUpload() {
-        document.getElementById('file-input-doc').click();
-    }
-
-    handleImageUpload(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                this.addImageElement(event.target.result, 100, 100);
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    handleDocumentUpload(e) {
-        const file = e.target.files[0];
-        if (file) {
-            // Verificar el tipo de archivo
-            const allowedTypes = [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'text/plain'
-            ];
-            
-            if (!allowedTypes.includes(file.type)) {
-                alert('Tipo de archivo no soportado. Por favor, selecciona un archivo PDF, Word o texto plano.');
-                return;
-            }
-            
-            // Verificar el tamaño del archivo (máximo 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                alert('El archivo es demasiado grande. El tamaño máximo permitido es 10MB.');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                this.addDocumentElement(event.target.result, file.type, file.name);
-            };
-            reader.readAsArrayBuffer(file); // Usar ArrayBuffer para PDFs
-        }
-        
-        // Limpiar el input para permitir subir el mismo archivo nuevamente
-        e.target.value = '';
-    }
-
-    // ===== TUTORIAL =====
-    openTutorial() {
-        document.getElementById('tutorial-modal').classList.add('active');
-        this.currentSlide = 0;
-        this.updateTutorialSlide();
-    }
-
-    closeTutorial() {
-        document.getElementById('tutorial-modal').classList.remove('active');
-    }
-
-    prevSlide() {
-        if (this.currentSlide > 0) {
-            this.currentSlide--;
-            this.updateTutorialSlide();
-        }
-    }
-
-    nextSlide() {
-        const slides = document.querySelectorAll('.tutorial-slide');
-        if (this.currentSlide < slides.length - 1) {
-            this.currentSlide++;
-            this.updateTutorialSlide();
-        }
-    }
-
-    updateTutorialSlide() {
-        const slides = document.querySelectorAll('.tutorial-slide');
-        const indicators = document.querySelectorAll('.indicator');
-        
-        slides.forEach((slide, index) => {
-            slide.classList.toggle('active', index === this.currentSlide);
-        });
-        
-        indicators.forEach((indicator, index) => {
-            indicator.classList.toggle('active', index === this.currentSlide);
-        });
-        
-        document.getElementById('prev-slide').disabled = this.currentSlide === 0;
-        document.getElementById('next-slide').disabled = this.currentSlide === slides.length - 1;
-    }
-
-    // ===== MÉTODOS DE CONTROLES VISUALES =====
-    rotateElement(elementId, degrees) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element) {
-            element.rotation = (element.rotation || 0) + degrees;
-            const elementDiv = document.getElementById(elementId);
-            if (elementDiv) {
-                elementDiv.style.transform = `rotate(${element.rotation}deg)`;
-            }
-            this.showNotification(`Elemento rotado ${degrees}°`);
-        }
-    }
-
-    startFreeRotation(elementId) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (!element) return;
-
-        this.rotatingElement = elementId;
-        this.rotationStartAngle = 0;
-        this.rotationCenter = { x: 0, y: 0 };
-        
-        // Cambiar cursor para indicar modo de rotación
-        document.body.style.cursor = 'crosshair';
-        
-        this.showNotification('Haz clic y arrastra para rotar libremente. Haz clic fuera para terminar.');
-        
-        // Agregar event listeners temporales
-        const canvas = document.getElementById('canvas');
-        this.rotationMouseDownHandler = this.handleRotationMouseDown.bind(this);
-        this.rotationMouseMoveHandler = this.handleRotationMouseMove.bind(this);
-        this.rotationMouseUpHandler = this.handleRotationMouseUp.bind(this);
-        
-        canvas.addEventListener('mousedown', this.rotationMouseDownHandler);
-        canvas.addEventListener('mousemove', this.rotationMouseMoveHandler);
-        canvas.addEventListener('mouseup', this.rotationMouseUpHandler);
-    }
-
-    handleRotationMouseDown(e) {
-        if (!this.rotatingElement) return;
-        
-        const elementDiv = document.getElementById(`element-${this.rotatingElement}`);
-        
-        if (elementDiv && (elementDiv.contains(e.target) || e.target.closest('.canvas-element'))) {
-            this.isRotating = true;
-            const elementRect = elementDiv.getBoundingClientRect();
-            this.rotationCenter = {
-                x: elementRect.left + elementRect.width / 2,
-                y: elementRect.top + elementRect.height / 2
-            };
-            this.rotationStartAngle = Math.atan2(e.clientY - this.rotationCenter.y, e.clientX - this.rotationCenter.x);
-        } else {
-            // Clic fuera del elemento - terminar rotación
-            this.endFreeRotation();
-        }
-    }
-
-    handleRotationMouseMove(e) {
-        if (!this.rotatingElement || !this.isRotating) return;
-        
-        const currentAngle = Math.atan2(e.clientY - this.rotationCenter.y, e.clientX - this.rotationCenter.x);
-        const angleDiff = (currentAngle - this.rotationStartAngle) * (180 / Math.PI);
-        
-        const element = this.elements.find(el => el.id === this.rotatingElement);
-        if (element) {
-            element.rotation = (element.rotation || 0) + angleDiff;
-            const elementDiv = document.getElementById(`element-${this.rotatingElement}`);
-            if (elementDiv) {
-                elementDiv.style.transform = `rotate(${element.rotation}deg)`;
-            }
-            this.rotationStartAngle = currentAngle;
-        }
-    }
-
-    handleRotationMouseUp(e) {
-        if (this.rotatingElement && this.isRotating) {
-            this.isRotating = false;
-        }
-    }
-
-    endFreeRotation() {
-        if (this.rotatingElement) {
-            this.rotatingElement = null;
-            this.isRotating = false;
-            document.body.style.cursor = 'default';
-            
-            // Remover event listeners
-            const canvas = document.getElementById('canvas');
-            if (this.rotationMouseDownHandler) {
-                canvas.removeEventListener('mousedown', this.rotationMouseDownHandler);
-                canvas.removeEventListener('mousemove', this.rotationMouseMoveHandler);
-                canvas.removeEventListener('mouseup', this.rotationMouseUpHandler);
-            }
-            
-            this.showNotification('Rotación libre terminada');
-        }
-    }
-
-    // Método flipElement eliminado - ahora se usa flipImageElement
-
-    toggleTextStyleElement(elementId, style) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element && element.type === 'text') {
-            element[style] = !element[style];
-            const elementDiv = document.getElementById(`element-${elementId}`);
-            if (elementDiv) {
-                const textarea = elementDiv.querySelector('.text-element');
-                if (textarea) {
-                    textarea.style.fontWeight = element.bold ? 'bold' : 'normal';
-                    textarea.style.fontStyle = element.italic ? 'italic' : 'normal';
-                    textarea.style.textDecoration = element.underline ? 'underline' : 'none';
-                }
-            }
-            this.showNotification(`Estilo ${style} ${element[style] ? 'activado' : 'desactivado'}`);
-        }
-    }
-
-    rotateTextElement(elementId, degrees) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element) {
-            element.rotation = (element.rotation || 0) + degrees;
-            const elementDiv = document.getElementById(`element-${elementId}`);
-            if (elementDiv) {
-                elementDiv.style.transform = `rotate(${element.rotation}deg)`;
-            }
-            this.showNotification(`Texto rotado ${degrees}°`);
-        }
-    }
-
-    enableTextMove(elementId) {
-        const elementDiv = document.getElementById(`element-${elementId}`);
-        if (elementDiv) {
-            elementDiv.style.cursor = 'move';
-            this.showNotification('Modo mover activado - Arrastra el cuadro de texto');
-            
-            // Activar modo mover
-            elementDiv.classList.add('move-mode');
-            
-            // Configurar evento de arrastre temporal
-            const handleMouseDown = (e) => {
-                if (!e.target.classList.contains('text-element') && 
-                    !e.target.classList.contains('text-control-btn')) {
-                    this.startDrag(e, elementDiv);
-                }
-            };
-            
-            elementDiv.addEventListener('mousedown', handleMouseDown);
-            
-            // Desactivar después de 5 segundos
-            setTimeout(() => {
-                elementDiv.classList.remove('move-mode');
-                elementDiv.style.cursor = 'default';
-                elementDiv.removeEventListener('mousedown', handleMouseDown);
-                this.showNotification('Modo mover desactivado');
-            }, 5000);
-        }
-    }
-
-    deleteElement(elementId) {
-        if (confirm('¿Estás seguro de que quieres eliminar este elemento?')) {
-            // Remover del array de elementos
-            this.elements = this.elements.filter(el => el.id !== elementId);
-            
-            // Remover del DOM
-            const elementDiv = document.getElementById(`element-${elementId}`);
-            if (elementDiv) {
-                elementDiv.remove();
-            }
-            
-            // Limpiar selección
+    deselectElement() {
+        if (this.selectedElement) {
+            this.selectedElement.classList.remove('selected');
             this.selectedElement = null;
-            document.querySelectorAll('.canvas-element').forEach(el => el.classList.remove('selected'));
-            
-            this.showNotification('Elemento eliminado');
-        }
-    }
-
-    zoomInDocument(elementId) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element && element.type === 'document') {
-            element.width = Math.min(element.width * 1.2, 1200);
-            element.height = Math.min(element.height * 1.2, 1600);
-            element.scale = Math.min(element.scale * 1.2, 300);
-            this.updateElementProperties(document.getElementById(elementId), element);
-            this.showNotification('Zoom aumentado');
-        }
-    }
-
-    zoomOutDocument(elementId) {
-        const element = this.elements.find(el => el.id === elementId);
-        if (element && element.type === 'document') {
-            element.width = Math.max(element.width * 0.8, 300);
-            element.height = Math.max(element.height * 0.8, 400);
-            element.scale = Math.max(element.scale * 0.8, 25);
-            this.updateElementProperties(document.getElementById(elementId), element);
-            this.showNotification('Zoom reducido');
+            this.hideToolbar();
         }
     }
 
     // ===== UTILIDADES =====
     showNotification(message) {
-        // Evitar notificaciones duplicadas
-        if (this.lastNotification === message) {
-            return;
-        }
+        if (this.lastNotification === message) return;
         this.lastNotification = message;
         
-        // Limpiar notificaciones anteriores
         const existingNotifications = document.querySelectorAll('.notification');
         existingNotifications.forEach(notif => notif.remove());
         
@@ -2645,273 +1245,50 @@ class PizarraApp {
         }, 2000);
     }
 
-    deselectElement() {
-        if (this.selectedElement) {
-            this.selectedElement.classList.remove('selected');
-            const elementId = this.selectedElement.id.replace('element-', '');
-            const elementData = this.elements.find(el => el.id === elementId);
-            if (elementData && elementData.type === 'text') {
-                const textarea = this.selectedElement.querySelector('textarea');
-                if (textarea) {
-                    elementData.text = textarea.value;
-                    textarea.blur();
-                }
-            }
-            this.selectedElement = null;
-            this.hideToolbar();
+    triggerImageUpload() {
+        document.getElementById('file-input-img').click();
+    }
+
+    triggerDocumentUpload() {
+        document.getElementById('file-input-doc').click();
+    }
+
+    handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                this.addImageElement(event.target.result, 100, 100);
+            };
+            reader.readAsDataURL(file);
         }
     }
 
-    hideToolbar() {
-        const toolbar = document.getElementById('toolbar');
-        toolbar.classList.remove('open');
-    }
-
-    updateToolbar(tool) {
-        if (tool === 'text') {
-            // ...
-            const highlightPicker = document.getElementById('text-highlight');
-            if (highlightPicker) {
-                highlightPicker.addEventListener('input', (e) => {
-                    if (this.selectedElement) {
-                        const elementId = this.selectedElement.id.replace('element-', '');
-                        const element = this.elements.find(el => el.id === elementId);
-                        if (element && element.type === 'text' && element.styles.isHighlighted) {
-                            element.styles.highlightColor = e.target.value;
-                            this.updateTextElement(this.selectedElement, element);
-                        }
-                    }
-                });
-            }
-        }
-    }
-
-    bindToolbarEvents(element) {
-        if (element.type === 'text') {
-            const highlightPicker = document.getElementById('text-highlight');
-            if (highlightPicker) {
-                highlightPicker.addEventListener('input', (e) => {
-                    if (this.selectedElement) {
-                        const elementId = this.selectedElement.id.replace('element-', '');
-                        const elementData = this.elements.find(el => el.id === elementId);
-                        if (elementData && elementData.type === 'text') {
-                            elementData.styles.isHighlighted = true;
-                            elementData.styles.highlightColor = e.target.value;
-                            this.updateTextElement(this.selectedElement, elementData);
-                        }
-                    }
-                });
-            }
-        }
-    }
-
-    getCanvasCoordinates(e) {
-        const canvas = document.getElementById('canvas');
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - this.board.pan.x) / this.board.zoom;
-        const y = (e.clientY - rect.top - this.board.pan.y) / this.board.zoom;
-        return { x, y };
-    }
-
-    parseSVGPath(path) {
-        const points = [];
-        const commands = path.match(/[ML]\d+\.?\d*,\d+\.?\d*/g) || [];
-        
-        commands.forEach(cmd => {
-            const coords = cmd.substring(1).split(',');
-            points.push({
-                x: parseFloat(coords[0]),
-                y: parseFloat(coords[1])
-            });
-        });
-        
-        return points;
-    }
-
-    calculatePathBounds(pathData) {
-        const points = this.parseSVGPath(pathData);
-        if (points.length === 0) {
-            return { x: 0, y: 0, width: 100, height: 100 };
-        }
-        
-        let minX = points[0].x;
-        let maxX = points[0].x;
-        let minY = points[0].y;
-        let maxY = points[0].y;
-        
-        points.forEach(point => {
-            minX = Math.min(minX, point.x);
-            maxX = Math.max(maxX, point.x);
-            minY = Math.min(minY, point.y);
-            maxY = Math.max(maxY, point.y);
-        });
-        
-        return {
-            x: minX,
-            y: minY,
-            width: maxX - minX + 10,
-            height: maxY - minY + 10
-        };
-    }
-
-    translatePath(path, dx, dy) {
-        return path.replace(/([a-zA-Z])([^a-zA-Z]*)/g, (match, command, coords) => {
-            // Solo se trasladan los comandos de movimiento absoluto (M)
-            if (command !== 'M') {
-                return match;
+    handleDocumentUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+            
+            if (!allowedTypes.includes(file.type)) {
+                alert('Tipo de archivo no soportado. Por favor, selecciona un archivo PDF o Word.');
+                return;
             }
             
-            const points = coords.trim().split(/[\s,]+/).map(Number);
-            const newPoints = [];
-            for (let i = 0; i < points.length; i += 2) {
-                newPoints.push(points[i] + dx, points[i + 1] + dy);
-            }
-            
-            return command + newPoints.join(' ');
-        });
-    }
-
-    clear() {
-        this.board.elements = this.board.elements.filter(el => el.type !== 'drawing');
-        this.board.clearCanvas();
-        this.board.loadCanvasElements(this.board.elements);
-        this.history = [[]];
-        this.historyIndex = 0;
-        this.board.showNotification('Dibujo limpiado');
-    }
-
-    undo() {
-        if (this.historyIndex > 0) {
-            this.historyIndex--;
-            const previousDrawings = this.history[this.historyIndex];
-            this.board.elements = this.board.elements.filter(el => el.type !== 'drawing');
-            this.board.elements.push(...previousDrawings);
-            this.board.clearCanvas();
-            this.board.loadCanvasElements(this.board.elements);
-            this.board.showNotification('Deshacer');
-        } else {
-            this.board.showNotification('No hay más acciones para deshacer');
-        }
-    }
-
-    redo() {
-        if (this.historyIndex < this.history.length - 1) {
-            this.historyIndex++;
-            const nextDrawings = this.history[this.historyIndex];
-            this.board.elements = this.board.elements.filter(el => el.type !== 'drawing');
-            this.board.elements.push(...nextDrawings);
-            this.board.clearCanvas();
-            this.board.loadCanvasElements(this.board.elements);
-            this.board.showNotification('Rehacer');
-        } else {
-            this.board.showNotification('No hay más acciones para rehacer');
-        }
-    }
-
-    saveToHistory() {
-        this.history = this.history.slice(0, this.historyIndex + 1);
-        const currentDrawings = this.board.elements.filter(el => el.type === 'drawing');
-        this.history.push(currentDrawings);
-        this.historyIndex++;
-    }
-
-    cleanup() {
-        if (this.tempSvg) {
-            this.tempSvg.remove();
-            this.tempSvg = null;
-        }
-        this.currentPath = [];
-        this.currentShape = null;
-        this.startPoint = null;
-        this.lastPoint = null;
-        
-        // Limpiar animation frame pendiente
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-    }
-
-    addDrawingElement(pathData, style) {
-        const element = {
-            id: `draw-${Date.now()}`,
-            type: 'drawing',
-            path: pathData,
-            style: style
-        };
-        const activeLayer = this.getActiveLayer();
-        if (activeLayer) {
-            activeLayer.elements.push(element);
-        }
-        this.drawPathOnCanvas(element);
-    }
-
-    drawPathOnCanvas(element) {
-        const drawingLayer = document.getElementById('drawing-layer');
-        if (!drawingLayer) return;
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        // Validate the 'd' attribute to avoid NaN values in SVG paths
-        if (typeof element.path === 'string' && !element.path.includes('NaN')) {
-            path.setAttribute('d', element.path);
-            path.setAttribute('data-id', element.id);
-            this.applyDrawingStyle(path, element.style);
-            drawingLayer.appendChild(path);
-        } else {
-            console.warn('Invalid SVG path data:', element.path);
-            return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                this.addDocumentElement(event.target.result, file.type, file.name);
+            };
+            reader.readAsDataURL(file);
         }
         
+        e.target.value = '';
     }
 
-    clearDrawingsOnCanvas() {
-        const drawingLayer = document.getElementById('drawing-layer');
-        if (drawingLayer) {
-            drawingLayer.innerHTML = '';
-        }
-    }
-
-    redrawAllDrawings() {
-        this.clearDrawingsOnCanvas();
-        this.elements.forEach(element => {
-            if (element.type === 'drawing') {
-                this.drawPathOnCanvas(element);
-            }
-        });
-    }
-
-    renderAllElements() {
-        const canvasContent = document.querySelector('.canvas-content');
-        // Limpiar elementos no SVG
-        canvasContent.querySelectorAll('.canvas-element').forEach(el => el.remove());
-        // Limpiar dibujos SVG
-        this.clearDrawingsOnCanvas();
-
-        this.elements.forEach(element => {
-            if (element.type === 'drawing') {
-                this.drawPathOnCanvas(element);
-            } else {
-                this.renderElement(element);
-            }
-        });
-    }
-
-    findElementById(elementId) {
-        for (const layer of this.board.layers) {
-            const element = layer.elements.find(el => el.id === elementId);
-            if (element) {
-                return { element, layer };
-            }
-        }
-        return { element: null, layer: null };
-    }
-
-    getActiveLayer() {
-        return this.board.layers.find(l => l.id === this.activeLayerId);
-    }
-    
     // ===== GESTIÓN DE CAPAS =====
-
     toggleLayersPanel(forceState) {
         const panel = document.getElementById('layers-panel');
         panel.classList.toggle('active', forceState);
@@ -2922,6 +1299,8 @@ class PizarraApp {
 
     renderLayersPanel() {
         const layersList = document.getElementById('layers-list');
+        if (!layersList) return;
+        
         layersList.innerHTML = '';
         [...this.board.layers].reverse().forEach(layer => {
             const layerGroup = this.createLayerGroupUI(layer);
@@ -2942,7 +1321,6 @@ class PizarraApp {
         name.textContent = layer.name;
         name.contentEditable = true;
         name.addEventListener('blur', (e) => this.renameLayer(layer.id, e.target.textContent));
-        name.addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
         
         header.appendChild(name);
         header.appendChild(this.createLayerActionsUI(layer));
@@ -2998,48 +1376,120 @@ class PizarraApp {
         }
     }
 
-    renameLayer(layerId, newName) {
-        const layer = this.board.layers.find(l => l.id === layerId);
-        if (layer && newName.trim()) layer.name = newName.trim();
-        this.renderLayersPanel();
-    }
-
     setActiveLayer(layerId) {
         this.activeLayerId = layerId;
-        this.deselectElement(); // Corregido el nombre de la función
-        this.renderLayersPanel();
-        // No redibujar todo, que es lo que causa el salto.
-    }
-
-    toggleLayerVisibility(layerId) {
-        const layer = this.board.layers.find(l => l.id === layerId);
-        if (layer) layer.visible = !layer.visible;
-        this.redrawAllElements();
+        this.currentLayer = this.board.layers.findIndex(l => l.id === layerId);
+        this.deselectElement();
         this.renderLayersPanel();
     }
 
-    toggleLayerLock(layerId) {
-        const layer = this.board.layers.find(l => l.id === layerId);
-        if (layer) layer.locked = !layer.locked;
-        this.renderLayersPanel();
+    getActiveLayer() {
+        return this.board.layers.find(l => l.id === this.activeLayerId);
     }
 
-    // ===== Lógica de Dibujo Principal =====
+    // ===== MÉTODOS AUXILIARES =====
+    findElementById(elementId) {
+        for (const layer of this.board.layers) {
+            const element = layer.elements.find(el => el.id === elementId);
+            if (element) return element;
+        }
+        return null;
+    }
+
+    loadCanvasElements(elements) {
+        this.clearCanvas();
+        
+        if (elements && elements.length > 0) {
+            const canvas = document.getElementById('canvas');
+            const canvasContent = canvas.querySelector('.canvas-content');
+            const fragment = document.createDocumentFragment();
+            
+            elements.forEach(element => {
+                const elementDiv = this.createElementDiv(element);
+                if (elementDiv) fragment.appendChild(elementDiv);
+            });
+            
+            canvasContent.appendChild(fragment);
+        }
+    }
+
+    clearCanvas() {
+        const canvas = document.getElementById('canvas');
+        const canvasContent = canvas.querySelector('.canvas-content');
+        const drawingLayer = document.getElementById('drawing-layer');
+        
+        canvasContent.innerHTML = '<span class="canvas-title">PIZARRA</span>';
+        if (drawingLayer) drawingLayer.innerHTML = '';
+        
+        this.board.layers.forEach(layer => {
+            layer.elements = [];
+        });
+    }
+
+    addResizeHandles(element) {
+        const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+        handles.forEach(pos => {
+            const handle = document.createElement('div');
+            handle.className = `resize-handle ${pos}`;
+            element.appendChild(handle);
+        });
+    }
+
+    updateElementPosition(element) {
+        const elementId = element.id.replace('element-', '');
+        const elementData = this.findElementById(elementId);
+        if (elementData) {
+            elementData.x = parseInt(element.style.left);
+            elementData.y = parseInt(element.style.top);
+        }
+    }
+
+    updateTextElement(elementDiv, data) {
+        const textArea = elementDiv.querySelector('textarea');
+        if (textArea) {
+            textArea.style.fontFamily = data.styles.fontFamily || 'Arial';
+            textArea.style.fontSize = data.styles.fontSize || '16px';
+            textArea.style.color = data.styles.color || '#000000';
+            textArea.style.fontWeight = data.styles.fontWeight || 'normal';
+            textArea.style.fontStyle = data.styles.fontStyle || 'normal';
+            textArea.style.textDecoration = data.styles.textDecoration || 'none';
+            textArea.style.textAlign = data.styles.textAlign || 'left';
+        }
+    }
+
+    handleTextInput(e, elementId) {
+        const textarea = e.target;
+        const element = this.findElementById(elementId);
+        if (element) element.text = textarea.value;
+    }
+
+    deleteElement(elementId) {
+        if (confirm('¿Estás seguro de que quieres eliminar este elemento?')) {
+            // Remover de todas las capas
+            this.board.layers.forEach(layer => {
+                layer.elements = layer.elements.filter(el => el.id !== elementId);
+            });
+            
+            const elementDiv = document.getElementById(`element-${elementId}`);
+            if (elementDiv) elementDiv.remove();
+            
+            this.selectedElement = null;
+            this.showNotification('Elemento eliminado');
+        }
+    }
+
+    hideToolbar() {
+        const toolbar = document.getElementById('toolbar');
+        if (toolbar) toolbar.classList.remove('open');
+    }
 
     redrawAllElements() {
         const canvasContent = document.querySelector('.canvas-content');
-        
-        // Clear existing elements more carefully
-        // 1. Clear drawings from the SVG layer
         const drawingLayer = document.getElementById('drawing-layer');
-        if (drawingLayer) {
-            drawingLayer.innerHTML = '';
-        }
-
-        // 2. Remove other elements (text, images, etc.)
+        
+        if (drawingLayer) drawingLayer.innerHTML = '';
         canvasContent.querySelectorAll('.canvas-element').forEach(el => el.remove());
 
-        // Now, redraw everything from the data model (this.board.layers)
         this.board.layers.forEach(layer => {
             if (layer.visible) {
                 layer.elements.forEach(element => {
@@ -3053,64 +1503,63 @@ class PizarraApp {
         });
     }
 
-    getElementAtPosition(x, y) {
-        for (let i = this.board.layers.length - 1; i >= 0; i--) {
-            const layer = this.board.layers[i];
-            if (layer.visible && !layer.locked) {
-                for (let j = layer.elements.length - 1; j >= 0; j--) {
-                    const element = layer.elements[j];
-                    if (this.isPointInElement(element, x, y)) {
-                        return element;
-                    }
-                }
+    throttle(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
             }
+        };
+    }
+
+    cleanup() {
+        if (this.notificationTimeout) {
+            clearTimeout(this.notificationTimeout);
+            this.notificationTimeout = null;
         }
-        return null;
     }
 
-    updateCanvasBounds() {
-        let minX = 0, minY = 0, maxX = window.innerWidth, maxY = window.innerHeight;
-        let hasElements = false;
+    // ===== TUTORIAL =====
+    openTutorial() {
+        document.getElementById('tutorial-modal').classList.add('active');
+        this.currentSlide = 0;
+        this.updateTutorialSlide();
+    }
 
-        this.board.layers.forEach(layer => {
-            layer.elements.forEach(element => {
-                hasElements = true;
-                minX = Math.min(minX, element.x);
-                minY = Math.min(minY, element.y);
-                maxX = Math.max(maxX, element.x + element.width);
-                maxY = Math.max(maxY, element.y + element.height);
-            });
+    closeTutorial() {
+        document.getElementById('tutorial-modal').classList.remove('active');
+    }
+
+    prevSlide() {
+        if (this.currentSlide > 0) {
+            this.currentSlide--;
+            this.updateTutorialSlide();
+        }
+    }
+
+    nextSlide() {
+        const slides = document.querySelectorAll('.tutorial-slide');
+        if (this.currentSlide < slides.length - 1) {
+            this.currentSlide++;
+            this.updateTutorialSlide();
+        }
+    }
+
+    updateTutorialSlide() {
+        const slides = document.querySelectorAll('.tutorial-slide');
+        const indicators = document.querySelectorAll('.indicator');
+        
+        slides.forEach((slide, index) => {
+            slide.classList.toggle('active', index === this.currentSlide);
         });
-
-        const canvasContent = document.querySelector('.canvas-content');
-        const padding = 200; // Espacio extra alrededor
-
-        canvasContent.style.width = `${maxX + padding}px`;
-        canvasContent.style.height = `${maxY + padding}px`;
-    }
-
-    updateCanvasTransform() {
-        const canvasContent = document.querySelector('.canvas-content');
-        canvasContent.style.transform = `translate(${this.board.pan.x}px, ${this.board.pan.y}px) scale(${this.board.zoom})`;
-    }
-
-    handleWheel(e) {
-        e.preventDefault();
-        const zoomIntensity = 0.1;
-        const oldZoom = this.board.zoom;
-        const mouseX = e.clientX;
-        const mouseY = e.clientY;
-
-        const newZoom = oldZoom - (e.deltaY > 0 ? zoomIntensity : -zoomIntensity);
-        this.board.zoom = Math.max(0.1, Math.min(newZoom, 5)); // Limitar zoom
-
-        const panXBeforeZoom = (mouseX - this.board.pan.x) / oldZoom;
-        const panYBeforeZoom = (mouseY - this.board.pan.y) / oldZoom;
-
-        this.board.pan.x = mouseX - panXBeforeZoom * this.board.zoom;
-        this.board.pan.y = mouseY - panYBeforeZoom * this.board.zoom;
-
-        this.updateCanvasTransform();
+        
+        indicators.forEach((indicator, index) => {
+            indicator.classList.toggle('active', index === this.currentSlide);
+        });
     }
 }
 
@@ -3119,17 +1568,12 @@ class DrawingTool {
     constructor(board) {
         this.board = board;
         this.isDrawing = false;
-        this.currentTool = 'pencil';
+        this.currentTool = 'pen';
         this.currentShape = null;
-        this.isDrawingShape = false;
         this.currentPath = [];
         this.startPoint = null;
         this.lastPoint = null;
-        this.tempSvg = null;
-        this.history = [];
-        this.historyIndex = -1;
         
-        // Configuración por defecto
         this.config = {
             color: '#000000',
             width: 3,
@@ -3138,43 +1582,22 @@ class DrawingTool {
     }
     
     setTool(tool) {
-        // Desactivar todas las herramientas
         document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
-        
-        // Activar la herramienta seleccionada
         const btn = document.querySelector(`[data-tool="${tool}"]`);
-        if (btn) {
-            btn.classList.add('active');
-        }
+        if (btn) btn.classList.add('active');
         
         this.currentTool = tool;
         this.currentShape = null;
-        this.isDrawingShape = false;
-        
-        // Desactivar formas si se selecciona herramienta de dibujo
-        document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
-        
         this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
         this.updateCursor();
     }
     
     setShape(shape) {
-        // Desactivar todas las formas
         document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
-        
-        // Activar la forma seleccionada
         const btn = document.querySelector(`[data-shape="${shape}"]`);
-        if (btn) {
-            btn.classList.add('active');
-        }
+        if (btn) btn.classList.add('active');
         
         this.currentShape = shape;
-        this.currentTool = null;
-        this.isDrawingShape = true;
-        
-        // Desactivar herramientas de dibujo
-        document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
-        
         this.board.showNotification(`Forma: ${this.getShapeName(shape)}`);
         this.updateCursor();
     }
@@ -3183,7 +1606,6 @@ class DrawingTool {
         const names = {
             'pen': 'Lápiz',
             'brush': 'Pincel',
-            'marker': 'Marcador',
             'eraser': 'Borrador'
         };
         return names[tool] || tool;
@@ -3193,8 +1615,7 @@ class DrawingTool {
         const names = {
             'line': 'Línea',
             'rectangle': 'Rectángulo',
-            'circle': 'Círculo',
-            'arrow': 'Flecha'
+            'circle': 'Círculo'
         };
         return names[shape] || shape;
     }
@@ -3203,30 +1624,19 @@ class DrawingTool {
         const canvas = document.getElementById('canvas');
         if (this.currentTool === 'eraser') {
             canvas.style.cursor = 'grab';
-        } else if (this.currentTool || this.isDrawingShape) {
-            canvas.style.cursor = 'crosshair';
         } else {
-            canvas.style.cursor = 'default';
+            canvas.style.cursor = 'crosshair';
         }
     }
     
     setupEvents() {
-        // Configurar eventos de controles
         const widthSlider = document.getElementById('draw-width');
-        const opacitySlider = document.getElementById('draw-opacity');
         const colorPicker = document.getElementById('draw-color');
         
         if (widthSlider) {
             widthSlider.addEventListener('input', (e) => {
                 this.config.width = parseInt(e.target.value);
                 document.getElementById('width-value').textContent = e.target.value + 'px';
-            });
-        }
-        
-        if (opacitySlider) {
-            opacitySlider.addEventListener('input', (e) => {
-                this.config.opacity = parseInt(e.target.value);
-                document.getElementById('opacity-value').textContent = e.target.value + '%';
             });
         }
         
@@ -3239,8 +1649,7 @@ class DrawingTool {
     
     startDrawing(e) {
         this.isDrawing = true;
-        this.board.isInteracting = true;
-        const { x, y } = this.board.getCanvasCoordinates(e);
+        const { x, y } = this.getCanvasCoordinates(e);
         this.startPoint = { x, y };
         this.lastPoint = { x, y };
 
@@ -3248,53 +1657,40 @@ class DrawingTool {
             this.eraseAtPoint(x, y);
         } else {
             this.currentPath = [];
-            this.createTempSvg();
-            this.startPoint = { x, y };
-            if (this.currentTool) { // Para pen, brush, marker
-                this.currentPath.push(this.startPoint);
-                this.drawCurrentPath();
-            }
+            this.currentPath.push(this.startPoint);
         }
     }
 
     updateDrawing(e) {
         if (!this.isDrawing) return;
-        const { x, y } = this.board.getCanvasCoordinates(e);
+        const { x, y } = this.getCanvasCoordinates(e);
 
         if (this.currentTool === 'eraser') {
             this.eraseAtPoint(x, y);
             return;
         }
 
-        const isFreeDrawing = ['pen', 'brush', 'marker'].includes(this.currentTool);
-        const isShapeDrawing = ['line', 'rectangle', 'circle', 'arrow'].includes(this.currentShape);
-
-        if (isFreeDrawing) {
+        if (['pen', 'brush'].includes(this.currentTool)) {
             this.currentPath.push({ x, y });
             this.drawCurrentPath();
-        } else if (isShapeDrawing) {
+        } else if (this.currentShape) {
             this.lastPoint = { x, y };
-            this.drawShapePreview(this.startPoint, this.lastPoint);
         }
     }
     
     finishDrawing() {
         if (!this.isDrawing) return;
-        
         this.isDrawing = false;
-        this.board.isInteracting = false;
-        
-        // Finalizar dibujo libre (lápiz, marcador)
+
+        // Finalizar dibujo libre
         if (this.currentPath && this.currentPath.length > 1) {
             const style = this.getDrawingStyle();
             const pathData = this.createPathData(this.currentPath);
-            
-            // Calcular posición y dimensiones del dibujo
             const bounds = this.calculatePathBounds(pathData);
             
             const element = {
                 id: `draw-${Date.now()}`,
-                type: 'dibujo',
+                type: 'drawing',
                 path: pathData,
                 style: style,
                 x: bounds.x,
@@ -3318,7 +1714,7 @@ class DrawingTool {
                 
                 const element = {
                     id: `draw-${Date.now()}`,
-                    type: 'dibujo',
+                    type: 'drawing',
                     path: pathData,
                     style: style,
                     x: bounds.x,
@@ -3334,250 +1730,11 @@ class DrawingTool {
         }
         
         this.cleanupAfterDrawing();
-        this.currentShape = null;
-    }
-    
-    startFreeDrawing(x, y) {
-        this.createTempSvg();
-        this.currentPath = [{ x, y }];
-        // Iniciar el dibujo inmediatamente
-        this.drawCurrentPath();
-    }
-    
-    updateFreeDrawing(x, y) {
-        if (this.currentPath.length === 0) return;
-        
-        const lastPoint = this.currentPath[this.currentPath.length - 1];
-        const distance = Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2);
-        
-        // Optimización: Reducir frecuencia de actualización para mejor rendimiento
-        if (distance > 2) { // Dibujo más fluido - agregar puntos cada 2px
-            this.currentPath.push({ x, y });
-            // Usar requestAnimationFrame para suavizar el dibujo
-            if (!this.animationFrameId) {
-                this.animationFrameId = requestAnimationFrame(() => {
-                    this.drawCurrentPath();
-                    this.animationFrameId = null;
-                });
-            }
-        }
-    }
-    
-    finishFreeDrawing() {
-        if (this.currentPath.length > 1) {
-            const pathData = this.createPathData(this.currentPath);
-            const style = this.getCurrentStyle();
-            const bounds = this.calculatePathBounds(pathData);
-            
-            const element = {
-                id: `draw-${Date.now()}`,
-                type: 'dibujo',
-                path: pathData,
-                style: style,
-                x: bounds.x,
-                y: bounds.y,
-                width: bounds.width,
-                height: bounds.height,
-                rotation: 0,
-                layer: this.board.currentLayer
-            };
-            
-            this.board.addDrawingElement(element);
-        }
-        // Limpiar SVG temporal
-        this.cleanup();
-    }
-    
-    startShapeDrawing(x, y) {
-        this.createTempSvg();
-        this.startPoint = { x, y };
-    }
-    
-    updateShapeDrawing(x, y) {
-        if (!this.tempSvg) return;
-        
-        // Actualizar el path actual con el nuevo punto
-        this.currentPath = [{ x: this.startPoint.x, y: this.startPoint.y }, { x, y }];
-        
-        this.tempSvg.innerHTML = '';
-        this.drawShapePreview(this.startPoint, { x, y });
-    }
-    
-    finishShapeDrawing() {
-        if (!this.startPoint || !this.lastPoint) return;
-            
-        const pathData = this.createShapePath(this.startPoint, this.lastPoint);
-        const style = this.getCurrentStyle();
-        const bounds = this.calculateShapeBounds(this.startPoint, this.lastPoint);
-        
-        if (pathData) {
-            const element = {
-                id: `draw-${Date.now()}`,
-                type: 'dibujo',
-                path: pathData,
-                style: style,
-                x: bounds.x,
-                y: bounds.y,
-                width: bounds.width,
-                height: bounds.height,
-                rotation: 0,
-                layer: this.board.currentLayer
-            };
-            
-            this.board.addDrawingElement(element);
-        }
-
-        if (this.tempSvg) {
-            this.tempSvg.innerHTML = '';
-        }
-    }
-    
-    startErasing(x, y) {
-        this.eraseAtPoint(x, y);
-    }
-    
-    updateErasing(x, y) {
-        this.eraseAtPoint(x, y);
-    }
-    
-    eraseAtPoint(x, y) {
-        const eraserPath = `M ${x - 0.1},${y - 0.1} L ${x},${y}`;
-        const style = {
-            color: '#FFFFFF',
-            width: this.config.width * 2,
-            opacity: 100,
-            tool: 'eraser'
-        };
-        
-        const bounds = this.calculatePathBounds(eraserPath);
-        const element = {
-            id: `draw-${Date.now()}`,
-            type: 'dibujo',
-            path: eraserPath,
-            style: style,
-            x: bounds.x,
-            y: bounds.y,
-            width: bounds.width,
-            height: bounds.height,
-            rotation: 0,
-            layer: this.board.currentLayer
-        };
-        
-        this.board.addDrawingElement(element);
-    }
-    
-    isPointInDrawing(element, x, y, radius) {
-        if (!element.path) return false;
-        
-        const points = this.parseSVGPath(element.path);
-        const strokeWidth = element.style?.width || 3;
-        
-        for (let i = 0; i < points.length - 1; i++) {
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            
-            const distance = this.pointToLineDistance(x, y, p1.x, p1.y, p2.x, p2.y);
-            if (distance <= strokeWidth + radius) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    parseSVGPath(path) {
-        const points = [];
-        const commands = path.match(/[ML]\d+\.?\d*,\d+\.?\d*/g) || [];
-        
-        commands.forEach(cmd => {
-            const coords = cmd.substring(1).split(',');
-            points.push({
-                x: parseFloat(coords[0]),
-                y: parseFloat(coords[1])
-            });
-        });
-        
-        return points;
-    }
-    
-    pointToLineDistance(px, py, x1, y1, x2, y2) {
-        const A = px - x1;
-        const B = py - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
-
-        const dot = A * C + B * D;
-        const lenSq = C * C + D * D;
-        let param = -1;
-        
-        if (lenSq !== 0) {
-            param = dot / lenSq;
-        }
-
-        let xx, yy;
-
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
-        }
-
-        const dx = px - xx;
-        const dy = py - yy;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    createTempSvg() {
-        const canvas = document.getElementById('canvas');
-        const canvasContent = canvas.querySelector('.canvas-content');
-        this.tempSvg = document.getElementById('temp-drawing-svg');
-        
-        if (!this.tempSvg) {
-            this.tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            this.tempSvg.id = 'temp-drawing-svg';
-            this.tempSvg.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                z-index: 1000;
-            `;
-            canvasContent.appendChild(this.tempSvg);
-        }
-        
-        this.tempSvg.innerHTML = '';
     }
     
     drawCurrentPath() {
-        if (!this.tempSvg || this.currentPath.length < 2) return;
-        
-        this.tempSvg.innerHTML = '';
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const pathData = this.createPathData(this.currentPath);
-        
-        path.setAttribute('d', pathData);
-        this.applyStyleToPath(path);
-        this.tempSvg.appendChild(path);
-    }
-    
-    drawShapePreview(start, end) {
-        if (!this.tempSvg) return;
-        
-        this.tempSvg.innerHTML = '';
-        const pathData = this.createShapePath(start, end);
-        if (!pathData) return;
-        
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', pathData);
-        this.applyStyleToPath(path);
-        this.tempSvg.appendChild(path);
+        // El dibujo en tiempo real se maneja directamente en el SVG temporal
+        // Los trazos finales se guardan como elementos
     }
     
     createPathData(points) {
@@ -3595,78 +1752,58 @@ class DrawingTool {
         switch(this.currentShape) {
             case 'line':
                 return `M${start.x},${start.y} L${end.x},${end.y}`;
-            
             case 'rectangle':
                 const rectX = Math.min(start.x, end.x);
                 const rectY = Math.min(start.y, end.y);
                 const width = Math.abs(start.x - end.x);
                 const height = Math.abs(start.y - end.y);
                 return `M${rectX},${rectY} h${width} v${height} h${-width} Z`;
-
             case 'circle':
                 const radiusX = Math.abs(end.x - start.x) / 2;
                 const radiusY = Math.abs(end.y - start.y) / 2;
                 const centerX = start.x + (end.x > start.x ? 1 : -1) * radiusX;
                 const centerY = start.y + (end.y > start.y ? 1 : -1) * radiusY;
                 return `M${centerX - radiusX},${centerY} a${radiusX},${radiusY} 0 1,0 ${radiusX * 2},0 a${radiusX},${radiusY} 0 1,0 -${radiusX * 2},0 Z`;
-
-            case 'arrow':
-                return this.createArrowPath(start, end);
-
             default:
                 return '';
         }
     }
     
-    createArrowPath(start, end) {
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const angle = Math.atan2(dy, dx);
-        const arrowLength = 20;
-        const arrowAngle = Math.PI / 6;
-        
-        const arrow1X = end.x - arrowLength * Math.cos(angle - arrowAngle);
-        const arrow1Y = end.y - arrowLength * Math.sin(angle - arrowAngle);
-        const arrow2X = end.x - arrowLength * Math.cos(angle + arrowAngle);
-        const arrow2Y = end.y - arrowLength * Math.sin(angle + arrowAngle);
-        
-        return `M${start.x},${start.y} L${end.x},${end.y} M${arrow1X},${arrow1Y} L${end.x},${end.y} L${arrow2X},${arrow2Y}`;
-    }
-    
-    applyStyleToPath(path) {
-        const style = this.getCurrentStyle();
-        
-        path.setAttribute('stroke', style.color);
-        path.setAttribute('stroke-width', style.width);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('opacity', style.opacity / 100);
-        path.setAttribute('stroke-linecap', 'round');
-        path.setAttribute('stroke-linejoin', 'round');
-        
-        // Aplicar estilo según la herramienta
-        if (this.currentTool === 'brush') {
-            path.setAttribute('stroke-width', style.width * 1.5);
-            path.setAttribute('opacity', (style.opacity / 100) * 0.8);
-        } else if (this.currentTool === 'marker') {
-            path.setAttribute('stroke-width', style.width * 2);
-            path.setAttribute('opacity', (style.opacity / 100) * 0.6);
-        }
-    }
-    
-    getCurrentStyle() {
-        const style = {
-            color: this.config.color,
-            width: this.config.width,
-            opacity: this.config.opacity,
-            tool: this.currentTool || 'pen'
+    getDrawingStyle() {
+        return {
+            stroke: this.config.color,
+            strokeWidth: this.config.width,
+            fill: 'none',
+            lineCap: 'round',
+            lineJoin: 'round',
+            opacity: this.config.opacity / 100
         };
-
-        if (this.currentTool === 'eraser') {
-            style.color = '#FFFFFF';
-            style.opacity = 100;
-        }
-
-        return style;
+    }
+    
+    eraseAtPoint(x, y) {
+        const eraserPath = `M ${x - 0.1},${y - 0.1} L ${x},${y}`;
+        const style = {
+            stroke: '#FFFFFF',
+            strokeWidth: this.config.width * 2,
+            fill: 'none',
+            opacity: 1
+        };
+        
+        const bounds = this.calculatePathBounds(eraserPath);
+        const element = {
+            id: `draw-${Date.now()}`,
+            type: 'drawing',
+            path: eraserPath,
+            style: style,
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+            rotation: 0,
+            layer: this.board.currentLayer
+        };
+        
+        this.board.addDrawingElement(element);
     }
     
     calculatePathBounds(pathData) {
@@ -3690,7 +1827,7 @@ class DrawingTool {
         return {
             x: minX,
             y: minY,
-            width: maxX - minX + 10, // Agregar margen
+            width: maxX - minX + 10,
             height: maxY - minY + 10
         };
     }
@@ -3701,38 +1838,33 @@ class DrawingTool {
 
         switch(this.currentShape) {
             case 'line':
-            case 'arrow':
                 x = Math.min(start.x, end.x);
                 y = Math.min(start.y, end.y);
                 width = Math.abs(start.x - end.x);
                 height = Math.abs(start.y - end.y);
                 break;
             case 'rectangle':
-                 x = Math.min(start.x, end.x);
-                 y = Math.min(start.y, end.y);
-                 width = Math.abs(start.x - end.x);
-                 height = Math.abs(start.y - end.y);
+                x = Math.min(start.x, end.x);
+                y = Math.min(start.y, end.y);
+                width = Math.abs(start.x - end.x);
+                height = Math.abs(start.y - end.y);
                 break;
             case 'circle':
                 const centerX = (start.x + end.x) / 2;
                 const centerY = (start.y + end.y) / 2;
                 const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)) / 2;
-
                 x = centerX - radius;
                 y = centerY - radius;
                 width = radius * 2;
                 height = radius * 2;
                 break;
             default:
-                 x = Math.min(start.x, end.x);
-                 y = Math.min(start.y, end.y);
-                 width = Math.abs(start.x - end.x);
-                 height = Math.abs(start.y - end.y);
+                x = Math.min(start.x, end.x);
+                y = Math.min(start.y, end.y);
+                width = Math.abs(start.x - end.x);
+                height = Math.abs(start.y - end.y);
         }
         
-        if (width < margin) width = margin;
-        if (height < margin) height = margin;
-
         return { 
             x: x - margin, 
             y: y - margin, 
@@ -3740,93 +1872,47 @@ class DrawingTool {
             height: height + margin * 2 
         };
     }
-
+    
+    parseSVGPath(path) {
+        const points = [];
+        const commands = path.match(/[ML]\d+\.?\d*,\d+\.?\d*/g) || [];
+        
+        commands.forEach(cmd => {
+            const coords = cmd.substring(1).split(',');
+            points.push({
+                x: parseFloat(coords[0]),
+                y: parseFloat(coords[1])
+            });
+        });
+        
+        return points;
+    }
+    
+    getCanvasCoordinates(e) {
+        const canvas = document.getElementById('canvas');
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - this.board.pan.x) / this.board.zoom;
+        const y = (e.clientY - rect.top - this.board.pan.y) / this.board.zoom;
+        return { x, y };
+    }
+    
     clear() {
-        this.board.elements = this.board.elements.filter(el => el.type !== 'drawing');
-        this.board.redrawAllDrawings();
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (drawingLayer) drawingLayer.innerHTML = '';
+        
+        // Limpiar elementos de dibujo de todas las capas
+        this.board.layers.forEach(layer => {
+            layer.elements = layer.elements.filter(el => el.type !== 'drawing');
+        });
+        
         this.board.showNotification('Dibujos limpiados');
     }
     
-    undo() {
-        const drawings = this.board.elements.filter(el => el.type === 'drawing');
-        if (drawings.length > 0) {
-            const lastDrawingId = drawings[drawings.length - 1].id;
-            this.board.elements = this.board.elements.filter(el => el.id !== lastDrawingId);
-            this.board.redrawAllDrawings();
-            this.board.showNotification('Deshacer dibujo');
-        } else {
-            this.board.showNotification('No hay más dibujos para deshacer');
-        }
-    }
-    
-    redo() {
-        this.board.showNotification('Rehacer no disponible para dibujos');
-    }
-    
-    saveToHistory() {
-        // Para dibujos, no necesitamos historial complejo ya que se manejan directamente en el DOM
-        // Solo notificar que se guardó
-        this.board.showNotification('Dibujo guardado');
-    }
-    
-    cleanup() {
-        if (this.tempSvg) {
-            this.tempSvg.remove();
-            this.tempSvg = null;
-        }
-        this.currentPath = [];
-        this.currentShape = null;
-        this.startPoint = null;
-        this.lastPoint = null;
-        
-        // Limpiar animation frame pendiente
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-    }
-
-    getDrawingStyle() {
-        const style = {
-            stroke: this.config.color,
-            strokeWidth: this.config.width,
-            fill: 'none',
-            lineCap: 'round',
-            lineJoin: 'round',
-        };
-
-        switch (this.currentTool) {
-            case 'brush':
-                style.opacity = '0.5';
-                break;
-            case 'marker':
-                style.strokeWidth = this.config.width * 2;
-                style.lineCap = 'square';
-                break;
-        }
-        
-        if (this.currentShape) {
-            style.fill = this.config.fill ? this.config.color : 'none';
-        }
-
-        return style;
-    }
-
     cleanupAfterDrawing() {
-        if (this.tempSvg) {
-            this.tempSvg.remove();
-            this.tempSvg = null;
-        }
         this.currentPath = [];
         this.currentShape = null;
         this.startPoint = null;
         this.lastPoint = null;
-        
-        // Limpiar animation frame pendiente
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
     }
 }
 
