@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("conexion.php");
+include("includes/conexion.php");
 
 // Procesar el formulario si se envió
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -57,3 +57,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
 </body>
 </html>
+
