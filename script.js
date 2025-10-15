@@ -24,6 +24,9 @@ class PizarraApp {
         // Inicializar nueva herramienta de dibujo
         this.drawingTool = new DrawingTool(this);
         
+        // Sistema de elementos del canvas
+        this.elements = [];
+        
         // Usar requestAnimationFrame para inicialización no crítica
         requestAnimationFrame(() => this.init());
         
@@ -923,7 +926,7 @@ class PizarraApp {
         if (activeLayer) {
             activeLayer.elements.push(elementData);
         }
-        this.drawPathOnCanvas(elementData);
+        this.renderDrawingElement(elementData);
     }
 
     addDocumentElement(src, type, name) {
@@ -973,7 +976,34 @@ class PizarraApp {
         }
     }
 
+    // NUEVO MÉTODO ESPECÍFICO PARA DIBUJOS
+    renderDrawingElement(element) {
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (!drawingLayer) return;
+
+        // Limpiar dibujo existente con el mismo ID
+        const existingPath = drawingLayer.querySelector(`[data-id="${element.id}"]`);
+        if (existingPath) {
+            existingPath.remove();
+        }
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        
+        if (typeof element.path === 'string' && !element.path.includes('NaN')) {
+            path.setAttribute('d', element.path);
+            path.setAttribute('data-id', element.id);
+            this.applyDrawingStyle(path, element.style);
+            drawingLayer.appendChild(path);
+        }
+    }
+
     createElementDiv(element) {
+        // Para elementos de dibujo, no crear div, solo renderizar en SVG
+        if (element.type === 'drawing') {
+            this.renderDrawingElement(element);
+            return null;
+        }
+
         const elementDiv = document.createElement('div');
         elementDiv.className = 'canvas-element';
         elementDiv.id = `element-${element.id}`;
@@ -986,7 +1016,7 @@ class PizarraApp {
         elementDiv.style.opacity = (element.opacity || 100) / 100;
         elementDiv.style.zIndex = element.layer || 0;
 
-        if (element.type !== 'drawing' && element.type !== 'text') {
+        if (element.type !== 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
             elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
         } else if (element.type === 'text') {
@@ -1047,22 +1077,6 @@ class PizarraApp {
                     }
                 }, 10);
                 break;
-            case 'drawing':
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('width', '100%');
-                svg.setAttribute('height', '100%');
-                svg.setAttribute('viewBox', `0 0 ${element.width || 1} ${element.height || 1}`);
-                
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                if (typeof element.path === 'string' && !element.path.includes('NaN')) {
-                    path.setAttribute('d', element.path);
-                    path.setAttribute('data-id', element.id);
-                    this.applyDrawingStyle(path, element.style);
-                    svg.appendChild(path);
-                }
-                
-                elementDiv.appendChild(svg);
-                break;
             case 'document':
                 elementDiv.innerHTML = `
                     <div style="width: 100%; height: 100%; background: #f5f5f5; display: flex; align-items: center; justify-content: center;">
@@ -1106,20 +1120,6 @@ class PizarraApp {
         elementDiv.style.transform = `rotate(${element.rotation || 0}deg)`;
         elementDiv.style.opacity = (element.opacity || 100) / 100;
         elementDiv.style.zIndex = element.layer || 0;
-    }
-
-    drawPathOnCanvas(element) {
-        const drawingLayer = document.getElementById('drawing-layer');
-        if (!drawingLayer) return;
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        
-        if (typeof element.path === 'string' && !element.path.includes('NaN')) {
-            path.setAttribute('d', element.path);
-            path.setAttribute('data-id', element.id);
-            this.applyDrawingStyle(path, element.style);
-            drawingLayer.appendChild(path);
-        }
     }
 
     // ===== INTERACCIÓN CON EL CANVAS =====
@@ -1402,14 +1402,21 @@ class PizarraApp {
         if (elements && elements.length > 0) {
             const canvas = document.getElementById('canvas');
             const canvasContent = canvas.querySelector('.canvas-content');
-            const fragment = document.createDocumentFragment();
+            const drawingLayer = document.getElementById('drawing-layer');
+            
+            // Limpiar el SVG de dibujos
+            if (drawingLayer) {
+                drawingLayer.innerHTML = '';
+            }
             
             elements.forEach(element => {
-                const elementDiv = this.createElementDiv(element);
-                if (elementDiv) fragment.appendChild(elementDiv);
+                if (element.type === 'drawing') {
+                    this.renderDrawingElement(element);
+                } else {
+                    const elementDiv = this.createElementDiv(element);
+                    if (elementDiv) canvasContent.appendChild(elementDiv);
+                }
             });
-            
-            canvasContent.appendChild(fragment);
         }
     }
 
@@ -1470,8 +1477,16 @@ class PizarraApp {
                 layer.elements = layer.elements.filter(el => el.id !== elementId);
             });
             
+            // Remover del DOM
             const elementDiv = document.getElementById(`element-${elementId}`);
             if (elementDiv) elementDiv.remove();
+            
+            // Remover del SVG si es un dibujo
+            const drawingLayer = document.getElementById('drawing-layer');
+            if (drawingLayer) {
+                const path = drawingLayer.querySelector(`[data-id="${elementId}"]`);
+                if (path) path.remove();
+            }
             
             this.selectedElement = null;
             this.showNotification('Elemento eliminado');
@@ -1494,7 +1509,7 @@ class PizarraApp {
             if (layer.visible) {
                 layer.elements.forEach(element => {
                     if (element.type === 'drawing') {
-                        this.drawPathOnCanvas(element);
+                        this.renderDrawingElement(element);
                     } else {
                         this.renderElement(element);
                     }
@@ -1563,7 +1578,7 @@ class PizarraApp {
     }
 }
 
-// ===== CLASE DE HERRAMIENTA DE DIBUJO =====
+// ===== CLASE DE HERRAMIENTA DE DIBUJO CORREGIDA =====
 class DrawingTool {
     constructor(board) {
         this.board = board;
@@ -1573,6 +1588,7 @@ class DrawingTool {
         this.currentPath = [];
         this.startPoint = null;
         this.lastPoint = null;
+        this.tempSvg = null;
         
         this.config = {
             color: '#000000',
@@ -1656,8 +1672,8 @@ class DrawingTool {
         if (this.currentTool === 'eraser') {
             this.eraseAtPoint(x, y);
         } else {
-            this.currentPath = [];
-            this.currentPath.push(this.startPoint);
+            this.currentPath = [this.startPoint];
+            this.createTempSvg();
         }
     }
 
@@ -1675,6 +1691,7 @@ class DrawingTool {
             this.drawCurrentPath();
         } else if (this.currentShape) {
             this.lastPoint = { x, y };
+            this.drawShapePreview();
         }
     }
     
@@ -1732,9 +1749,63 @@ class DrawingTool {
         this.cleanupAfterDrawing();
     }
     
+    createTempSvg() {
+        const canvas = document.getElementById('canvas');
+        const canvasContent = canvas.querySelector('.canvas-content');
+        this.tempSvg = document.getElementById('temp-drawing-svg');
+        
+        if (!this.tempSvg) {
+            this.tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            this.tempSvg.id = 'temp-drawing-svg';
+            this.tempSvg.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1000;
+            `;
+            canvasContent.appendChild(this.tempSvg);
+        }
+        
+        this.tempSvg.innerHTML = '';
+    }
+    
     drawCurrentPath() {
-        // El dibujo en tiempo real se maneja directamente en el SVG temporal
-        // Los trazos finales se guardan como elementos
+        if (!this.tempSvg || this.currentPath.length < 2) return;
+        
+        this.tempSvg.innerHTML = '';
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const pathData = this.createPathData(this.currentPath);
+        
+        path.setAttribute('d', pathData);
+        this.applyStyleToPath(path);
+        this.tempSvg.appendChild(path);
+    }
+    
+    drawShapePreview() {
+        if (!this.tempSvg || !this.startPoint || !this.lastPoint) return;
+        
+        this.tempSvg.innerHTML = '';
+        const pathData = this.createShapePath(this.startPoint, this.lastPoint);
+        if (!pathData) return;
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        this.applyStyleToPath(path);
+        this.tempSvg.appendChild(path);
+    }
+    
+    applyStyleToPath(path) {
+        const style = this.getDrawingStyle();
+        
+        path.setAttribute('stroke', style.stroke);
+        path.setAttribute('stroke-width', style.strokeWidth);
+        path.setAttribute('fill', style.fill);
+        path.setAttribute('stroke-linecap', style.lineCap);
+        path.setAttribute('stroke-linejoin', style.lineJoin);
+        path.setAttribute('opacity', style.opacity);
     }
     
     createPathData(points) {
@@ -1786,6 +1857,8 @@ class DrawingTool {
             stroke: '#FFFFFF',
             strokeWidth: this.config.width * 2,
             fill: 'none',
+            lineCap: 'round',
+            lineJoin: 'round',
             opacity: 1
         };
         
@@ -1891,8 +1964,8 @@ class DrawingTool {
     getCanvasCoordinates(e) {
         const canvas = document.getElementById('canvas');
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left - this.board.pan.x) / this.board.zoom;
-        const y = (e.clientY - rect.top - this.board.pan.y) / this.board.zoom;
+        const x = (e.clientX - rect.left);
+        const y = (e.clientY - rect.top);
         return { x, y };
     }
     
@@ -1909,6 +1982,10 @@ class DrawingTool {
     }
     
     cleanupAfterDrawing() {
+        if (this.tempSvg) {
+            this.tempSvg.remove();
+            this.tempSvg = null;
+        }
         this.currentPath = [];
         this.currentShape = null;
         this.startPoint = null;
