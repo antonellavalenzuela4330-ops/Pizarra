@@ -1,4 +1,45 @@
 // Pizarra Digital - Aplicación Principal
+
+class ActionHistory {
+    constructor(app) {
+        this.app = app;
+        this.undoStack = [];
+        this.redoStack = [];
+        this.limit = 50;
+    }
+
+    execute(action) {
+        this.undoStack.push(action);
+        if (this.undoStack.length > this.limit) {
+            this.undoStack.shift();
+        }
+        this.redoStack = [];
+        this.app.updateUndoRedoButtons();
+    }
+
+    undo() {
+        if (this.undoStack.length === 0) return;
+        const action = this.undoStack.pop();
+        action.undo();
+        this.redoStack.push(action);
+        this.app.updateUndoRedoButtons();
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return;
+        const action = this.redoStack.pop();
+        action.execute();
+        this.undoStack.push(action);
+        this.app.updateUndoRedoButtons();
+    }
+
+    clear() {
+        this.undoStack = [];
+        this.redoStack = [];
+        this.app.updateUndoRedoButtons();
+    }
+}
+
 class PizarraApp {
     constructor() {
         // Optimización: inicializar solo propiedades esenciales
@@ -26,6 +67,8 @@ class PizarraApp {
         
         // Sistema de elementos del canvas
         this.elements = [];
+        
+        this.history = new ActionHistory(this);
         
         // Usar requestAnimationFrame para inicialización no crítica
         requestAnimationFrame(() => this.init());
@@ -88,6 +131,7 @@ class PizarraApp {
     
     async init() {
         this.setupEventListeners();
+        this.updateUndoRedoButtons();
         
         // Cargar proyecto actual de forma asíncrona
         await this.loadProjects();
@@ -111,9 +155,19 @@ class PizarraApp {
     async loadProjects() {
         try {
             const response = await fetch('api/get_projects.php');
-            const projects = await response.json();
+            const responseText = await response.text();
+
+            if (!response.ok) {
+                throw new Error(`Error del servidor: ${response.status} ${response.statusText}. Respuesta: ${responseText}`);
+            }
+
+            try {
+                const projects = JSON.parse(responseText);
             this.projects = projects;
             return projects;
+            } catch (jsonError) {
+                throw new Error(`La respuesta del servidor no es un JSON válido.\nRespuesta: ${responseText}`);
+            }
         } catch (error) {
             console.error('Error loading projects:', error);
             this.projects = [];
@@ -141,7 +195,18 @@ class PizarraApp {
                 })
             });
             
-            const data = await response.json();
+            const responseText = await response.text();
+
+            if (!response.ok) {
+                throw new Error(`Error del servidor: ${response.status} ${response.statusText}. Respuesta: ${responseText}`);
+            }
+            
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonError) {
+                throw new Error(`La respuesta del servidor no es un JSON válido.\nRespuesta: ${responseText}`);
+            }
             
             if (data.success) {
                 const newProject = {
@@ -156,6 +221,17 @@ class PizarraApp {
                 this.currentProject = newProject;
                 this.updateProjectsList();
                 this.clearCanvas();
+                this.history.clear();
+                
+                // Añadir el título para un proyecto nuevo y vacío
+                const canvasContent = document.querySelector('.canvas-content');
+                if (canvasContent) {
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'canvas-title';
+                    titleSpan.textContent = 'PIZARRA';
+                    canvasContent.appendChild(titleSpan);
+                }
+
                 this.updateProjectName();
                 this.showNotification('Proyecto creado exitosamente');
             } else {
@@ -428,6 +504,12 @@ class PizarraApp {
             this.saveCurrentProject();
         });
         
+        // Listeners para Deshacer y Rehacer (los botones se añadirán dinámicamente)
+        document.body.addEventListener('click', e => {
+            if (e.target.closest('#undo-btn')) this.undo();
+            if (e.target.closest('#redo-btn')) this.redo();
+        });
+        
         document.getElementById('image-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             const button = e.currentTarget;
@@ -680,11 +762,18 @@ class PizarraApp {
                 <span id="width-value" class="toolbar-value">3px</span>
             </div>
             <div class="tool-option">
+                <label>Opacidad:</label>
+                <input type="range" id="draw-opacity" min="0" max="100" value="100" class="toolbar-range">
+                <span id="opacity-value" class="toolbar-value">100%</span>
+            </div>
+            <div class="tool-option">
                 <label>Color:</label>
                 <input type="color" id="draw-color" value="#000000" class="toolbar-color">
             </div>
             <span class="toolbar-divider"></span>
-            <button onclick="app.drawingTool.clear()" class="toolbar-btn danger"><i class="fas fa-trash"></i> Limpiar Todo</button>
+            <button id="undo-btn" class="toolbar-btn" title="Deshacer"><i class="fas fa-undo"></i></button>
+            <button id="redo-btn" class="toolbar-btn" title="Rehacer"><i class="fas fa-redo"></i></button>
+            <button onclick="app.drawingTool.clear()" class="toolbar-btn danger" title="Limpiar Todo"><i class="fas fa-trash"></i></button>
         `;
     }
 
@@ -858,11 +947,15 @@ class PizarraApp {
             layer: this.currentLayer
         };
         
-        const activeLayer = this.getActiveLayer();
-        if (activeLayer) {
-            activeLayer.elements.push(element);
-        }
-        this.renderElement(element);
+        const action = {
+            app: this,
+            element: element,
+            execute: function() { this.app.internal_addElement(this.element); },
+            undo: function() { this.app.internal_removeElement(this.element.id); }
+        };
+
+        this.history.execute(action);
+        action.execute();
     }
 
     createTextBoxAtPosition(x, y) {
@@ -888,25 +981,43 @@ class PizarraApp {
             isEditing: true
         };
         
+        const action = {
+            app: this,
+            element: element,
+            execute: function() {
+                this.app.internal_addElement(this.element, true);
+            },
+            undo: function() {
+                this.app.internal_removeElement(this.element.id);
+            }
+        };
+
+        this.history.execute(action);
+        action.execute();
+        
+        this.showNotification('Cuadro de texto creado');
+    }
+
+    internal_addElement(element, isNewText = false) {
         const activeLayer = this.getActiveLayer();
         if (activeLayer) {
             activeLayer.elements.push(element);
         }
         this.renderElement(element);
-        
-        setTimeout(() => {
-            const elementDiv = document.getElementById(`element-${element.id}`);
-            if (elementDiv) {
-                this.selectElement(null, elementDiv);
-                const textarea = elementDiv.querySelector('.text-element');
-                if (textarea) {
-                    textarea.focus();
-                    textarea.select();
+
+        if (isNewText) {
+            setTimeout(() => {
+                const elementDiv = document.getElementById(`element-${element.id}`);
+                if (elementDiv) {
+                    this.selectElement(null, elementDiv);
+                    const textarea = elementDiv.querySelector('.text-element');
+                    if (textarea) {
+                        textarea.focus();
+                        textarea.select();
+                    }
                 }
-            }
-        }, 100);
-        
-        this.showNotification('Cuadro de texto creado');
+            }, 100);
+        }
     }
 
     createNewTextBox() {
@@ -922,6 +1033,18 @@ class PizarraApp {
     }
 
     addDrawingElement(elementData) {
+        const action = {
+            app: this,
+            element: elementData,
+            execute: function() { this.app.internal_addDrawingElement(this.element); },
+            undo: function() { this.app.internal_removeElement(this.element.id); }
+        };
+
+        this.history.execute(action);
+        action.execute();
+    }
+
+    internal_addDrawingElement(elementData) {
         const activeLayer = this.getActiveLayer();
         if (activeLayer) {
             activeLayer.elements.push(elementData);
@@ -951,11 +1074,15 @@ class PizarraApp {
             scale: 100
         };
         
-        const activeLayer = this.getActiveLayer();
-        if (activeLayer) {
-            activeLayer.elements.push(element);
-        }
-        this.renderElement(element);
+        const action = {
+            app: this,
+            element: element,
+            execute: function() { this.app.internal_addElement(this.element); },
+            undo: function() { this.app.internal_removeElement(this.element.id); }
+        };
+
+        this.history.execute(action);
+        action.execute();
         this.showNotification(`Documento "${name}" cargado correctamente`);
     }
 
@@ -1105,8 +1232,8 @@ class PizarraApp {
         path.setAttribute('stroke', style.stroke || '#000000');
         path.setAttribute('stroke-width', style.strokeWidth || 1);
         path.setAttribute('fill', style.fill || 'none');
-        path.setAttribute('stroke-linecap', style.lineCap || 'round');
-        path.setAttribute('stroke-linejoin', style.lineJoin || 'round');
+        path.setAttribute('stroke-linecap', style.strokeLinecap || 'round');
+        path.setAttribute('stroke-linejoin', style.strokeLinejoin || 'round');
         if (style.opacity) {
             path.setAttribute('opacity', style.opacity);
         }
@@ -1162,6 +1289,13 @@ class PizarraApp {
         if (this.selectedTool === 'draw' && this.drawingTool.isDrawing) {
             e.preventDefault();
             this.drawingTool.finishDrawing();
+            this.isDrawing = false; // Asegurarse de resetear el estado
+            return; // Detener la ejecución para evitar conflictos
+        }
+
+        // Si no se está dibujando, se puede manejar el final de un arrastre de elemento
+        if (this.isDragging) {
+            this.isDragging = false;
         }
     }
 
@@ -1243,6 +1377,21 @@ class PizarraApp {
             notification.remove();
             this.lastNotification = null;
         }, 2000);
+    }
+
+    undo() {
+        this.history.undo();
+    }
+
+    redo() {
+        this.history.redo();
+    }
+
+    updateUndoRedoButtons() {
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+        if (undoBtn) undoBtn.disabled = this.history.undoStack.length === 0;
+        if (redoBtn) redoBtn.disabled = this.history.redoStack.length === 0;
     }
 
     triggerImageUpload() {
@@ -1421,13 +1570,19 @@ class PizarraApp {
     }
 
     clearCanvas() {
-        const canvas = document.getElementById('canvas');
-        const canvasContent = canvas.querySelector('.canvas-content');
+        const canvasContent = document.querySelector('.canvas-content');
+        if (!canvasContent) return;
+
+        // Eliminar todos los elementos del lienzo (divs, título) excepto la capa de dibujo
+        canvasContent.querySelectorAll('.canvas-element, .canvas-title').forEach(el => el.remove());
+
+        // Limpiar la capa de dibujo SVG sin eliminarla
         const drawingLayer = document.getElementById('drawing-layer');
-        
-        canvasContent.innerHTML = '<span class="canvas-title">PIZARRA</span>';
-        if (drawingLayer) drawingLayer.innerHTML = '';
-        
+        if (drawingLayer) {
+            drawingLayer.innerHTML = '';
+        }
+
+        // Limpiar los elementos del modelo de datos
         this.board.layers.forEach(layer => {
             layer.elements = [];
         });
@@ -1471,25 +1626,63 @@ class PizarraApp {
     }
 
     deleteElement(elementId) {
-        if (confirm('¿Estás seguro de que quieres eliminar este elemento?')) {
-            // Remover de todas las capas
-            this.board.layers.forEach(layer => {
-                layer.elements = layer.elements.filter(el => el.id !== elementId);
-            });
-            
-            // Remover del DOM
-            const elementDiv = document.getElementById(`element-${elementId}`);
-            if (elementDiv) elementDiv.remove();
-            
-            // Remover del SVG si es un dibujo
-            const drawingLayer = document.getElementById('drawing-layer');
-            if (drawingLayer) {
-                const path = drawingLayer.querySelector(`[data-id="${elementId}"]`);
-                if (path) path.remove();
+        this.removeElementById(elementId, true);
+    }
+
+    removeElementById(elementId, withConfirmation = true) {
+        const element = this.findElementById(elementId);
+        if (!element) return;
+        
+        const performDelete = () => {
+            const action = {
+                app: this,
+                element: JSON.parse(JSON.stringify(element)), // Deep copy
+                execute: function() {
+                    this.app.internal_removeElement(this.element.id);
+                },
+                undo: function() {
+                    if (this.element.type === 'drawing') {
+                        this.app.internal_addDrawingElement(this.element);
+                    } else {
+                        this.app.internal_addElement(this.element);
+                    }
+                }
+            };
+            this.history.execute(action);
+            action.execute();
+            if (withConfirmation) {
+                this.showNotification('Elemento eliminado');
             }
-            
+        };
+
+        if (withConfirmation) {
+            if (confirm('¿Estás seguro de que quieres eliminar este elemento?')) {
+                performDelete();
+            }
+        } else {
+            performDelete();
+        }
+    }
+
+    internal_removeElement(elementId) {
+        // Remover de todas las capas
+        this.board.layers.forEach(layer => {
+            layer.elements = layer.elements.filter(el => el.id !== elementId);
+        });
+        
+        // Remover del DOM
+        const elementDiv = document.getElementById(`element-${elementId}`);
+        if (elementDiv) elementDiv.remove();
+        
+        // Remover del SVG si es un dibujo
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (drawingLayer) {
+            const path = drawingLayer.querySelector(`[data-id="${elementId}"]`);
+            if (path) path.remove();
+        }
+        
+        if (this.selectedElement && this.selectedElement.id === `element-${elementId}`) {
             this.selectedElement = null;
-            this.showNotification('Elemento eliminado');
         }
     }
 
@@ -1578,16 +1771,194 @@ class PizarraApp {
     }
 }
 
-// ===== CLASE DE HERRAMIENTA DE DIBUJO CORREGIDA =====
+// ===== CLASES DE HERRAMIENTAS DE DIBUJO MODULARES =====
+
+class BaseDrawingTool {
+    constructor(drawingTool) {
+        this.drawingTool = drawingTool;
+        this.board = drawingTool.board;
+        this.config = drawingTool.config;
+        this.isDrawing = false;
+        this.startPoint = null;
+    }
+
+    onMouseDown(e) {
+        this.isDrawing = true;
+        this.startPoint = this.drawingTool.getCanvasCoordinates(e);
+    }
+
+    onMouseMove(e) {
+        if (!this.isDrawing) return;
+    }
+
+    onMouseUp(e) {
+        if (!this.isDrawing) return;
+        this.isDrawing = false;
+    }
+}
+
+class PenTool extends BaseDrawingTool {
+    constructor(drawingTool) {
+        super(drawingTool);
+        this.path = [];
+    }
+
+    onMouseDown(e) {
+        super.onMouseDown(e);
+        this.path = [this.startPoint];
+        this.drawingTool.createTempSvg();
+    }
+
+    onMouseMove(e) {
+        if (!this.isDrawing) return;
+        const currentPoint = this.drawingTool.getCanvasCoordinates(e);
+        this.path.push(currentPoint);
+        this.drawingTool.drawCurrentPath(this.path);
+    }
+
+    onMouseUp(e) {
+        if (!this.isDrawing) {
+            return;
+        }
+        super.onMouseUp(e);
+        if (this.path.length > 1) {
+            this.drawingTool.finalizePath(this.path);
+        }
+        this.drawingTool.cleanupAfterDrawing();
+        this.path = [];
+    }
+}
+
+class EraserTool extends BaseDrawingTool {
+    constructor(drawingTool) {
+        super(drawingTool);
+        this.deletedInStroke = new Map(); // Usar un Map para guardar el elemento completo
+    }
+
+    onMouseDown(e) {
+        super.onMouseDown(e);
+        this.deletedInStroke.clear();
+    }
+
+    onMouseMove(e) {
+        if (!this.isDrawing) return;
+
+        // Usar clientX/clientY porque elementsFromPoint espera coordenadas de viewport
+        const { clientX, clientY } = e;
+
+        const checkAndErase = (x, y) => {
+            const elements = document.elementsFromPoint(x, y);
+            for (const el of elements) {
+                const pathElement = el.closest('path[data-id]');
+                if (pathElement && pathElement.closest('#drawing-layer')) {
+                    const elementId = pathElement.dataset.id;
+                    if (elementId && !this.deletedInStroke.has(elementId)) {
+                        const elementData = this.board.findElementById(elementId);
+                        if (elementData) {
+                            // Guardar una copia profunda del elemento antes de borrarlo
+                            this.deletedInStroke.set(elementId, JSON.parse(JSON.stringify(elementData)));
+                            this.board.internal_removeElement(elementId);
+                        }
+                    }
+                }
+            }
+        }
+        
+        checkAndErase(clientX, clientY);
+    }
+
+    onMouseUp(e) {
+        if (!this.isDrawing) return;
+        super.onMouseUp(e);
+        
+        if (this.deletedInStroke.size > 0) {
+            const deletedElements = Array.from(this.deletedInStroke.values());
+            const action = {
+                app: this.board,
+                elements: deletedElements,
+                execute: function() { // Para Rehacer
+                    this.elements.forEach(el => this.app.internal_removeElement(el.id));
+                },
+                undo: function() { // Para Deshacer
+                    this.elements.forEach(el => this.app.internal_addDrawingElement(el));
+                }
+            };
+            this.board.history.execute(action);
+        }
+
+        this.deletedInStroke.clear();
+    }
+}
+
+class ShapeTool extends BaseDrawingTool {
+    constructor(drawingTool) {
+        super(drawingTool);
+        this.lastPoint = null;
+    }
+
+    onMouseDown(e) {
+        super.onMouseDown(e);
+        this.lastPoint = this.startPoint;
+        this.drawingTool.createTempSvg();
+    }
+
+    onMouseMove(e) {
+        if (!this.isDrawing) return;
+        this.lastPoint = this.drawingTool.getCanvasCoordinates(e);
+        const pathData = this.createShapePath(this.startPoint, this.lastPoint);
+        this.drawingTool.drawShapePreview(pathData);
+    }
+
+    onMouseUp(e) {
+        if (!this.isDrawing) return;
+        super.onMouseUp(e);
+        const pathData = this.createShapePath(this.startPoint, this.lastPoint);
+        if (pathData) {
+            this.drawingTool.finalizeShape(pathData, this.startPoint, this.lastPoint);
+        }
+        this.drawingTool.cleanupAfterDrawing();
+    }
+
+    createShapePath(start, end) {
+        throw new Error("createShapePath must be implemented by subclasses");
+    }
+}
+
+class LineTool extends ShapeTool {
+    createShapePath(start, end) {
+        return `M${start.x},${start.y} L${end.x},${end.y}`;
+    }
+}
+
+class RectangleTool extends ShapeTool {
+    createShapePath(start, end) {
+        const rectX = Math.min(start.x, end.x);
+        const rectY = Math.min(start.y, end.y);
+        const width = Math.abs(start.x - end.x);
+        const height = Math.abs(start.y - end.y);
+        return `M${rectX},${rectY} h${width} v${height} h${-width} Z`;
+    }
+}
+
+class CircleTool extends ShapeTool {
+    createShapePath(start, end) {
+        const radiusX = Math.abs(end.x - start.x) / 2;
+        const radiusY = Math.abs(end.y - start.y) / 2;
+        if (radiusX === 0 || radiusY === 0) return '';
+        const centerX = start.x + (end.x > start.x ? 1 : -1) * radiusX;
+        const centerY = start.y + (end.y > start.y ? 1 : -1) * radiusY;
+        return `M${centerX - radiusX},${centerY} a${radiusX},${radiusY} 0 1,0 ${2 * radiusX},0 a${radiusX},${radiusY} 0 1,0 -${2 * radiusX},0 Z`;
+    }
+}
+
+
+// ===== CLASE DE HERRAMIENTA DE DIBUJO REFACTORIZADA =====
 class DrawingTool {
     constructor(board) {
         this.board = board;
-        this.isDrawing = false;
-        this.currentTool = 'pen';
-        this.currentShape = null;
-        this.currentPath = [];
-        this.startPoint = null;
-        this.lastPoint = null;
+        this.activeToolInstance = null;
+        this.activeToolName = 'pen';
+        this.activeShapeName = null;
         this.tempSvg = null;
         
         this.config = {
@@ -1595,51 +1966,63 @@ class DrawingTool {
             width: 3,
             opacity: 100
         };
+
+        this.tools = {
+            'pen': new PenTool(this),
+            'brush': new PenTool(this),
+            'eraser': new EraserTool(this),
+            'line': new LineTool(this),
+            'rectangle': new RectangleTool(this),
+            'circle': new CircleTool(this)
+        };
+        this.activeToolInstance = this.tools['pen'];
     }
     
     setTool(tool) {
         document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
-        const btn = document.querySelector(`[data-tool="${tool}"]`);
-        if (btn) btn.classList.add('active');
+        const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
+        if (toolBtn) toolBtn.classList.add('active');
         
-        this.currentTool = tool;
-        this.currentShape = null;
+        document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
+        
+        this.activeToolName = tool;
+        this.activeShapeName = null;
+        this.activeToolInstance = this.tools[tool];
+        if (this.activeToolInstance) {
         this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
         this.updateCursor();
+        }
     }
     
     setShape(shape) {
+        document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
-        const btn = document.querySelector(`[data-shape="${shape}"]`);
-        if (btn) btn.classList.add('active');
+        const shapeBtn = document.querySelector(`[data-shape="${shape}"]`);
+        if (shapeBtn) shapeBtn.classList.add('active');
         
-        this.currentShape = shape;
+        this.activeShapeName = shape;
+        this.activeToolName = null;
+        this.activeToolInstance = this.tools[shape];
+        if (this.activeToolInstance) {
         this.board.showNotification(`Forma: ${this.getShapeName(shape)}`);
         this.updateCursor();
+        }
     }
     
     getToolName(tool) {
-        const names = {
-            'pen': 'Lápiz',
-            'brush': 'Pincel',
-            'eraser': 'Borrador'
-        };
-        return names[tool] || tool;
+        return { 'pen': 'Lápiz', 'brush': 'Pincel', 'eraser': 'Borrador' }[tool] || tool;
     }
     
     getShapeName(shape) {
-        const names = {
-            'line': 'Línea',
-            'rectangle': 'Rectángulo',
-            'circle': 'Círculo'
-        };
-        return names[shape] || shape;
+        return { 'line': 'Línea', 'rectangle': 'Rectángulo', 'circle': 'Círculo' }[shape] || shape;
     }
     
     updateCursor() {
         const canvas = document.getElementById('canvas');
-        if (this.currentTool === 'eraser') {
-            canvas.style.cursor = 'grab';
+        if (this.activeToolName === 'eraser') {
+            const size = Math.max(2, this.config.width);
+            const cursorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="none" stroke="black" stroke-width="1"/></svg>`;
+            canvas.style.cursor = `url('data:image/svg+xml;utf8,${encodeURIComponent(cursorSvg)}') ${size/2} ${size/2}, auto`;
         } else {
             canvas.style.cursor = 'crosshair';
         }
@@ -1648,14 +2031,23 @@ class DrawingTool {
     setupEvents() {
         const widthSlider = document.getElementById('draw-width');
         const colorPicker = document.getElementById('draw-color');
+        const opacitySlider = document.getElementById('draw-opacity');
         
         if (widthSlider) {
             widthSlider.addEventListener('input', (e) => {
-                this.config.width = parseInt(e.target.value);
-                document.getElementById('width-value').textContent = e.target.value + 'px';
+                this.config.width = parseInt(e.target.value, 10);
+                document.getElementById('width-value').textContent = `${e.target.value}px`;
+                this.updateCursor();
             });
         }
         
+        if (opacitySlider) {
+            opacitySlider.addEventListener('input', (e) => {
+                this.config.opacity = parseInt(e.target.value, 10);
+                document.getElementById('opacity-value').textContent = `${e.target.value}%`;
+            });
+        }
+
         if (colorPicker) {
             colorPicker.addEventListener('change', (e) => {
                 this.config.color = e.target.value;
@@ -1663,181 +2055,105 @@ class DrawingTool {
         }
     }
     
+    get isDrawing() {
+        return this.activeToolInstance ? this.activeToolInstance.isDrawing : false;
+    }
+    
     startDrawing(e) {
-        this.isDrawing = true;
-        const { x, y } = this.getCanvasCoordinates(e);
-        this.startPoint = { x, y };
-        this.lastPoint = { x, y };
-
-        if (this.currentTool === 'eraser') {
-            this.eraseAtPoint(x, y);
-        } else {
-            this.currentPath = [this.startPoint];
-            this.createTempSvg();
-        }
+        if (this.activeToolInstance) this.activeToolInstance.onMouseDown(e);
     }
 
     updateDrawing(e) {
-        if (!this.isDrawing) return;
-        const { x, y } = this.getCanvasCoordinates(e);
-
-        if (this.currentTool === 'eraser') {
-            this.eraseAtPoint(x, y);
-            return;
-        }
-
-        if (['pen', 'brush'].includes(this.currentTool)) {
-            this.currentPath.push({ x, y });
-            this.drawCurrentPath();
-        } else if (this.currentShape) {
-            this.lastPoint = { x, y };
-            this.drawShapePreview();
-        }
+        if (this.activeToolInstance) this.activeToolInstance.onMouseMove(e);
     }
     
     finishDrawing() {
-        if (!this.isDrawing) return;
-        this.isDrawing = false;
-
-        // Finalizar dibujo libre
-        if (this.currentPath && this.currentPath.length > 1) {
-            const style = this.getDrawingStyle();
-            const pathData = this.createPathData(this.currentPath);
-            const bounds = this.calculatePathBounds(pathData);
-            
-            const element = {
-                id: `draw-${Date.now()}`,
-                type: 'drawing',
-                path: pathData,
-                style: style,
-                x: bounds.x,
-                y: bounds.y,
-                width: bounds.width,
-                height: bounds.height,
-                rotation: 0,
-                layer: this.board.currentLayer
-            };
-            
-            this.board.addDrawingElement(element);
-        }
-        
-        // Finalizar formas
-        if (this.currentShape && this.startPoint && this.lastPoint) {
-            const style = this.getDrawingStyle();
-            const pathData = this.createShapePath(this.startPoint, this.lastPoint);
-            
-            if (pathData) {
-                const bounds = this.calculateShapeBounds(this.startPoint, this.lastPoint);
-                
-                const element = {
-                    id: `draw-${Date.now()}`,
-                    type: 'drawing',
-                    path: pathData,
-                    style: style,
-                    x: bounds.x,
-                    y: bounds.y,
-                    width: bounds.width,
-                    height: bounds.height,
-                    rotation: 0,
-                    layer: this.board.currentLayer
-                };
-                
-                this.board.addDrawingElement(element);
-            }
-        }
-        
-        this.cleanupAfterDrawing();
+        if (this.activeToolInstance) this.activeToolInstance.onMouseUp();
     }
     
     createTempSvg() {
-        const canvas = document.getElementById('canvas');
-        const canvasContent = canvas.querySelector('.canvas-content');
+        const canvasContent = document.querySelector('.canvas-content');
+        if (!canvasContent) return;
         this.tempSvg = document.getElementById('temp-drawing-svg');
         
         if (!this.tempSvg) {
             this.tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             this.tempSvg.id = 'temp-drawing-svg';
-            this.tempSvg.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                z-index: 1000;
-            `;
+            this.tempSvg.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000;`;
             canvasContent.appendChild(this.tempSvg);
         }
-        
         this.tempSvg.innerHTML = '';
     }
     
-    drawCurrentPath() {
-        if (!this.tempSvg || this.currentPath.length < 2) return;
+    drawCurrentPath(path) {
+        if (!this.tempSvg || path.length < 2) return;
         
         this.tempSvg.innerHTML = '';
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const pathData = this.createPathData(this.currentPath);
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const pathData = this.createPathData(path);
         
-        path.setAttribute('d', pathData);
-        this.applyStyleToPath(path);
-        this.tempSvg.appendChild(path);
+        pathEl.setAttribute('d', pathData);
+        this.applyStyleToPath(pathEl);
+        this.tempSvg.appendChild(pathEl);
     }
     
-    drawShapePreview() {
-        if (!this.tempSvg || !this.startPoint || !this.lastPoint) return;
-        
+    drawShapePreview(pathData) {
+        if (!this.tempSvg) return;
         this.tempSvg.innerHTML = '';
-        const pathData = this.createShapePath(this.startPoint, this.lastPoint);
         if (!pathData) return;
         
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', pathData);
-        this.applyStyleToPath(path);
-        this.tempSvg.appendChild(path);
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.setAttribute('d', pathData);
+        this.applyStyleToPath(pathEl);
+        this.tempSvg.appendChild(pathEl);
     }
     
     applyStyleToPath(path) {
         const style = this.getDrawingStyle();
+        Object.entries(style).forEach(([key, value]) => {
+            const attr = key.replace(/([A-Z])/g, (g) => `-${g[0].toLowerCase()}`);
+            path.setAttribute(attr, value);
+        });
+    }
+
+    finalizePath(path) {
+        if (path.length < 2) return;
         
-        path.setAttribute('stroke', style.stroke);
-        path.setAttribute('stroke-width', style.strokeWidth);
-        path.setAttribute('fill', style.fill);
-        path.setAttribute('stroke-linecap', style.lineCap);
-        path.setAttribute('stroke-linejoin', style.lineJoin);
-        path.setAttribute('opacity', style.opacity);
+        const style = this.getDrawingStyle();
+        const pathData = this.createPathData(path);
+        const bounds = this.calculatePathBounds(pathData);
+        
+        const element = {
+            id: `draw-${Date.now()}`,
+            type: 'drawing', path: pathData, style: style,
+            x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
+            rotation: 0, layer: this.board.currentLayer
+        };
+        
+        this.board.addDrawingElement(element);
+    }
+
+    finalizeShape(pathData, start, end) {
+        const style = this.getDrawingStyle();
+        const bounds = this.calculateShapeBounds(start, end, this.activeShapeName);
+        
+        const element = {
+            id: `draw-${Date.now()}`,
+            type: 'drawing', path: pathData, style: style,
+            x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
+            rotation: 0, layer: this.board.currentLayer
+        };
+        
+        this.board.addDrawingElement(element);
     }
     
     createPathData(points) {
-        if (points.length < 2) return '';
-        
-        let pathData = `M${points[0].x},${points[0].y}`;
+        if (points.length === 0) return "";
+        let path = "M" + points[0].x + "," + points[0].y;
         for (let i = 1; i < points.length; i++) {
-            pathData += ` L${points[i].x},${points[i].y}`;
+            path += " L" + points[i].x + "," + points[i].y;
         }
-        
-        return pathData;
-    }
-    
-    createShapePath(start, end) {
-        switch(this.currentShape) {
-            case 'line':
-                return `M${start.x},${start.y} L${end.x},${end.y}`;
-            case 'rectangle':
-                const rectX = Math.min(start.x, end.x);
-                const rectY = Math.min(start.y, end.y);
-                const width = Math.abs(start.x - end.x);
-                const height = Math.abs(start.y - end.y);
-                return `M${rectX},${rectY} h${width} v${height} h${-width} Z`;
-            case 'circle':
-                const radiusX = Math.abs(end.x - start.x) / 2;
-                const radiusY = Math.abs(end.y - start.y) / 2;
-                const centerX = start.x + (end.x > start.x ? 1 : -1) * radiusX;
-                const centerY = start.y + (end.y > start.y ? 1 : -1) * radiusY;
-                return `M${centerX - radiusX},${centerY} a${radiusX},${radiusY} 0 1,0 ${radiusX * 2},0 a${radiusX},${radiusY} 0 1,0 -${radiusX * 2},0 Z`;
-            default:
-                return '';
-        }
+        return path;
     }
     
     getDrawingStyle() {
@@ -1845,139 +2161,54 @@ class DrawingTool {
             stroke: this.config.color,
             strokeWidth: this.config.width,
             fill: 'none',
-            lineCap: 'round',
-            lineJoin: 'round',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
             opacity: this.config.opacity / 100
         };
     }
     
-    eraseAtPoint(x, y) {
-        const eraserPath = `M ${x - 0.1},${y - 0.1} L ${x},${y}`;
-        const style = {
-            stroke: '#FFFFFF',
-            strokeWidth: this.config.width * 2,
-            fill: 'none',
-            lineCap: 'round',
-            lineJoin: 'round',
-            opacity: 1
-        };
-        
-        const bounds = this.calculatePathBounds(eraserPath);
-        const element = {
-            id: `draw-${Date.now()}`,
-            type: 'drawing',
-            path: eraserPath,
-            style: style,
-            x: bounds.x,
-            y: bounds.y,
-            width: bounds.width,
-            height: bounds.height,
-            rotation: 0,
-            layer: this.board.currentLayer
-        };
-        
-        this.board.addDrawingElement(element);
-    }
-    
     calculatePathBounds(pathData) {
-        const points = this.parseSVGPath(pathData);
-        if (points.length === 0) {
-            return { x: 0, y: 0, width: 100, height: 100 };
-        }
-        
-        let minX = points[0].x;
-        let maxX = points[0].x;
-        let minY = points[0].y;
-        let maxY = points[0].y;
-        
-        points.forEach(point => {
-            minX = Math.min(minX, point.x);
-            maxX = Math.max(maxX, point.x);
-            minY = Math.min(minY, point.y);
-            maxY = Math.max(maxY, point.y);
-        });
-        
-        return {
-            x: minX,
-            y: minY,
-            width: maxX - minX + 10,
-            height: maxY - minY + 10
-        };
-    }
-    
-    calculateShapeBounds(start, end) {
-        let x, y, width, height;
-        const margin = this.config.width;
+        if (!pathData) return { x: 0, y: 0, width: 0, height: 0 };
+        const points = (pathData.match(/[\d\.]+/g) || []).map(Number);
+        if (points.length < 2) return { x: 0, y: 0, width: 0, height: 0 };
 
-        switch(this.currentShape) {
-            case 'line':
-                x = Math.min(start.x, end.x);
-                y = Math.min(start.y, end.y);
-                width = Math.abs(start.x - end.x);
-                height = Math.abs(start.y - end.y);
-                break;
-            case 'rectangle':
-                x = Math.min(start.x, end.x);
-                y = Math.min(start.y, end.y);
-                width = Math.abs(start.x - end.x);
-                height = Math.abs(start.y - end.y);
-                break;
-            case 'circle':
-                const centerX = (start.x + end.x) / 2;
-                const centerY = (start.y + end.y) / 2;
-                const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)) / 2;
-                x = centerX - radius;
-                y = centerY - radius;
-                width = radius * 2;
-                height = radius * 2;
-                break;
-            default:
-                x = Math.min(start.x, end.x);
-                y = Math.min(start.y, end.y);
-                width = Math.abs(start.x - end.x);
-                height = Math.abs(start.y - end.y);
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (let i = 0; i < points.length; i += 2) {
+            minX = Math.min(minX, points[i]);
+            maxX = Math.max(maxX, points[i]);
+            minY = Math.min(minY, points[i + 1]);
+            maxY = Math.max(maxY, points[i + 1]);
         }
-        
-        return { 
-            x: x - margin, 
-            y: y - margin, 
-            width: width + margin * 2, 
-            height: height + margin * 2 
-        };
+        const margin = this.config.width;
+        return { x: minX - margin, y: minY - margin, width: maxX - minX + margin * 2, height: maxY - minY + margin * 2 };
     }
     
-    parseSVGPath(path) {
-        const points = [];
-        const commands = path.match(/[ML]\d+\.?\d*,\d+\.?\d*/g) || [];
-        
-        commands.forEach(cmd => {
-            const coords = cmd.substring(1).split(',');
-            points.push({
-                x: parseFloat(coords[0]),
-                y: parseFloat(coords[1])
-            });
-        });
-        
-        return points;
+    calculateShapeBounds(start, end, shape) {
+        const margin = this.config.width;
+        const x = Math.min(start.x, end.x) - margin;
+        const y = Math.min(start.y, end.y) - margin;
+        const width = Math.abs(start.x - end.x) + margin * 2;
+        const height = Math.abs(start.y - end.y) + margin * 2;
+        return { x, y, width, height };
     }
     
     getCanvasCoordinates(e) {
         const canvas = document.getElementById('canvas');
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left);
-        const y = (e.clientY - rect.top);
+        // Incorporar pan y zoom para coordenadas precisas
+        const pan = this.board.board.pan;
+        const zoom = this.board.board.zoom;
+        const x = (e.clientX - rect.left - pan.x) / zoom;
+        const y = (e.clientY - rect.top - pan.y) / zoom;
         return { x, y };
     }
     
     clear() {
         const drawingLayer = document.getElementById('drawing-layer');
         if (drawingLayer) drawingLayer.innerHTML = '';
-        
-        // Limpiar elementos de dibujo de todas las capas
         this.board.layers.forEach(layer => {
             layer.elements = layer.elements.filter(el => el.type !== 'drawing');
         });
-        
         this.board.showNotification('Dibujos limpiados');
     }
     
@@ -1986,10 +2217,6 @@ class DrawingTool {
             this.tempSvg.remove();
             this.tempSvg = null;
         }
-        this.currentPath = [];
-        this.currentShape = null;
-        this.startPoint = null;
-        this.lastPoint = null;
     }
 }
 
