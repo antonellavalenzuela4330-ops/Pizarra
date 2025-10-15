@@ -1,11 +1,11 @@
 <?php
 session_start();
-include("includes/conexion.php");
+include("conexion.php");
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre = $_POST["nombre"];
+    $nombre_usuario = $_POST["nombre_usuario"];
     $email = $_POST["email"];
-    $password = password_hash($_POST["password"], PASSWORD_BCRYPT);
+    $contraseña = password_hash($_POST["contraseña"], PASSWORD_BCRYPT);
 
     // 1. Primero verifica si el email ya existe
     $sql_check = "SELECT id FROM usuarios WHERE email = ?";
@@ -21,9 +21,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // 2. Si no existe, inserta el nuevo usuario
-    $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)";
+    $sql = "INSERT INTO usuarios (nombre_usuario, email, contraseña) VALUES (?, ?, ?)";
     $stmt = $conexion->prepare($sql);
-    $stmt->bind_param("sss", $nombre, $email, $password);
+    $stmt->bind_param("sss", $nombre_usuario, $email, $contraseña);
     
     if ($stmt->execute()) {
         $_SESSION["mensaje"] = "¡Registro exitoso! Ahora puedes iniciar sesión.";
@@ -61,9 +61,9 @@ unset($_SESSION['mensaje']);
         
         <form method="POST" action="">
             <h2>Regístrate</h2>
-            <input type="text" name="nombre" placeholder="Nombre completo" required>
+            <input type="text" name="nombre_usuario" placeholder="Nombre de usuario" required>
             <input type="email" name="email" placeholder="Correo electrónico" required>
-            <input type="password" name="password" placeholder="Contraseña" required>
+            <input type="password" name="contraseña" placeholder="Contraseña" required>
             <button type="submit">Registrarse</button>
             <p>¿Ya tienes cuenta? <a href="login.php">Inicia sesión</a></p>
         </form>
