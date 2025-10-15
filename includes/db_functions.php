@@ -58,6 +58,10 @@ class DBFunctions {
         $sql = "INSERT INTO elementos_proyecto (proyecto_id, tipo, contenido, datos_json, ubicacion_x, ubicacion_y, capa) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conexion->prepare($sql);
+        
+        // Si es null, convertir a NULL de SQL
+        $contenido = $contenido === null ? null : $contenido;
+        
         $stmt->bind_param("isssddi", $proyecto_id, $tipo, $contenido, $datos_json, $ubicacion_x, $ubicacion_y, $capa);
         return $stmt->execute();
     }

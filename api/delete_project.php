@@ -18,15 +18,15 @@ try {
     }
     
     $db = new DBFunctions($conexion);
-    $projectId = $db->crearProyecto($_SESSION['usuario_id'], $data['nombre'], $data['descripcion']);
+    $success = $db->eliminarProyecto($data['projectId']);
 
-    if ($projectId) {
-        echo json_encode(['success' => true, 'projectId' => $projectId]);
+    if ($success) {
+        echo json_encode(['success' => true]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Error al crear proyecto en la base de datos']);
+        echo json_encode(['success' => false, 'message' => 'Error al eliminar proyecto']);
     }
 } catch (Exception $e) {
-    error_log("Error en create_project.php: " . $e->getMessage());
+    error_log("Error en delete_project.php: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
 }
 ?>

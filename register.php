@@ -1,6 +1,6 @@
 <?php
 session_start();
-include("conexion.php");
+include("includes/conexion.php");
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nombre_usuario = $_POST["nombre_usuario"];
@@ -70,3 +70,4 @@ unset($_SESSION['mensaje']);
     </div>
 </body>
 </html>
+
