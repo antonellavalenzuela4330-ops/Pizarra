@@ -4,9 +4,9 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 $host = "193.203.175.157";
-$usuario = "u157683007_aquino";
-$password = "Recetas27";
-$bd = "u157683007_recetasmrx";
+$usuario = "u157683007_anthony";
+$password = "Boardly12";
+$bd = "u157683007_boardly";
 
 // Crear conexión
 $conexion = new mysqli($host, $usuario, $password, $bd);
@@ -23,4 +23,5 @@ $conexion->set_charset("utf8mb4");
 $conexion->query("SET NAMES 'utf8mb4'");
 $conexion->query("SET CHARACTER SET utf8mb4");
 $conexion->query("SET COLLATION_CONNECTION = 'utf8mb4_unicode_ci'");
+
 ?>
