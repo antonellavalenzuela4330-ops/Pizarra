@@ -163,8 +163,8 @@ class PizarraApp {
 
             try {
                 const projects = JSON.parse(responseText);
-            this.projects = projects;
-            return projects;
+                this.projects = projects;
+                return projects;
             } catch (jsonError) {
                 throw new Error(`La respuesta del servidor no es un JSON válido.\nRespuesta: ${responseText}`);
             }
@@ -875,6 +875,47 @@ class PizarraApp {
     }
 
     // ===== MÉTODOS DE HERRAMIENTAS =====
+    setImageMode(mode) {
+        this.imageMode = mode;
+        this.showNotification(`Modo imagen: ${mode}`);
+    }
+
+    setTextStyle(style) {
+        if (!this.selectedElement) {
+            this.showNotification('Selecciona un cuadro de texto para aplicar un estilo.');
+            return;
+        }
+        const elementId = this.selectedElement.id.replace('element-', '');
+        const element = this.findElementById(elementId);
+
+        if (element && element.type === 'text') {
+            const styleProp = style === 'bold' ? 'fontWeight' : (style === 'italic' ? 'fontStyle' : 'textDecoration');
+            const activeValue = style === 'bold' ? 'bold' : (style === 'italic' ? 'italic' : 'underline');
+            const defaultValue = style === 'bold' ? 'normal' : (style === 'italic' ? 'normal' : 'none');
+
+            if (element.styles[styleProp] === activeValue) {
+                element.styles[styleProp] = defaultValue;
+            } else {
+                element.styles[styleProp] = activeValue;
+            }
+            this.updateTextElement(this.selectedElement, element);
+        }
+    }
+
+    setTextAlign(align) {
+        if (!this.selectedElement) {
+            this.showNotification('Selecciona un cuadro de texto para cambiar la alineación.');
+            return;
+        }
+        const elementId = this.selectedElement.id.replace('element-', '');
+        const element = this.findElementById(elementId);
+
+        if (element && element.type === 'text') {
+            element.styles.textAlign = align;
+            this.updateTextElement(this.selectedElement, element);
+        }
+    }
+
     applyImageTransform(property, value) {
         if (this.selectedElement) {
             const elementId = this.selectedElement.id.replace('element-', '');
@@ -1536,6 +1577,31 @@ class PizarraApp {
         return this.board.layers.find(l => l.id === this.activeLayerId);
     }
 
+    renameLayer(layerId, newName) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer && newName.trim()) {
+            layer.name = newName.trim();
+        }
+        this.renderLayersPanel();
+    }
+
+    toggleLayerVisibility(layerId) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer) {
+            layer.visible = !layer.visible;
+            this.redrawAllElements();
+            this.renderLayersPanel();
+        }
+    }
+
+    toggleLayerLock(layerId) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer) {
+            layer.locked = !layer.locked;
+            this.renderLayersPanel();
+        }
+    }
+
     // ===== MÉTODOS AUXILIARES =====
     findElementById(elementId) {
         for (const layer of this.board.layers) {
@@ -1709,6 +1775,32 @@ class PizarraApp {
                 });
             }
         });
+    }
+
+    updateCanvasTransform() {
+        const canvasContent = document.querySelector('.canvas-content');
+        if (canvasContent) {
+            canvasContent.style.transform = `translate(${this.board.pan.x}px, ${this.board.pan.y}px) scale(${this.board.zoom})`;
+        }
+    }
+
+    handleWheel(e) {
+        e.preventDefault();
+        const zoomIntensity = 0.1;
+        const oldZoom = this.board.zoom;
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+
+        const newZoom = oldZoom - (e.deltaY > 0 ? zoomIntensity : -zoomIntensity);
+        this.board.zoom = Math.max(0.1, Math.min(newZoom, 5));
+
+        const panXBeforeZoom = (mouseX - this.board.pan.x) / oldZoom;
+        const panYBeforeZoom = (mouseY - this.board.pan.y) / oldZoom;
+
+        this.board.pan.x = mouseX - panXBeforeZoom * this.board.zoom;
+        this.board.pan.y = mouseY - panYBeforeZoom * this.board.zoom;
+
+        this.updateCanvasTransform();
     }
 
     throttle(func, limit) {
@@ -1951,7 +2043,6 @@ class CircleTool extends ShapeTool {
     }
 }
 
-
 // ===== CLASE DE HERRAMIENTA DE DIBUJO REFACTORIZADA =====
 class DrawingTool {
     constructor(board) {
@@ -1989,8 +2080,8 @@ class DrawingTool {
         this.activeShapeName = null;
         this.activeToolInstance = this.tools[tool];
         if (this.activeToolInstance) {
-        this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
-        this.updateCursor();
+            this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
+            this.updateCursor();
         }
     }
     
@@ -2004,7 +2095,7 @@ class DrawingTool {
         this.activeToolName = null;
         this.activeToolInstance = this.tools[shape];
         if (this.activeToolInstance) {
-        this.board.showNotification(`Forma: ${this.getShapeName(shape)}`);
+            this.board.showNotification(`Forma: ${this.getShapeName(shape)}`);
         this.updateCursor();
         }
     }
