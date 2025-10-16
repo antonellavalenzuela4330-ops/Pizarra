@@ -70,12 +70,6 @@ class PizarraApp {
         
         this.history = new ActionHistory(this);
         
-        // Usar requestAnimationFrame para inicialización no crítica
-        requestAnimationFrame(() => this.init());
-        
-        // Limpiar recursos al cerrar la página
-        window.addEventListener('beforeunload', () => this.cleanup());
-
         this.board = {
             layers: [{
                 id: `layer-${Date.now()}`,
@@ -127,6 +121,12 @@ class PizarraApp {
                 canvas.style.cursor = 'default';
             }
         });
+        
+        // Usar requestAnimationFrame para inicialización no crítica
+        requestAnimationFrame(() => this.init());
+        
+        // Limpiar recursos al cerrar la página
+        window.addEventListener('beforeunload', () => this.cleanup());
     }
     
     async init() {
@@ -181,7 +181,7 @@ class PizarraApp {
     }
 
     async createNewProject() {
-        const projectName = document.getElementById('project-name').value || 'Proyecto sin nombre';
+        const projectName = document.getElementById('project-name')?.value || 'Proyecto sin nombre';
         
         try {
             const response = await fetch('api/create_project.php', {
@@ -354,7 +354,8 @@ class PizarraApp {
             
             this.currentProject.elements = this.getAllCanvasElements();
             this.currentProject.modified = new Date().toISOString();
-            this.currentProject.name = document.getElementById('project-name').value || 'Proyecto sin nombre';
+            const projectNameInput = document.getElementById('project-name');
+            this.currentProject.name = projectNameInput ? projectNameInput.value : 'Proyecto sin nombre';
             
             try {
                 const response = await fetch('api/save_project.php', {
@@ -463,8 +464,9 @@ class PizarraApp {
     }
 
     updateProjectName() {
-        if (this.currentProject) {
-            document.getElementById('project-name').value = this.currentProject.name;
+        const projectNameInput = document.getElementById('project-name');
+        if (this.currentProject && projectNameInput) {
+            projectNameInput.value = this.currentProject.name;
         }
     }
 
@@ -551,7 +553,10 @@ class PizarraApp {
 
         // Inputs de archivos
         document.getElementById('file-input-img')?.addEventListener('change', (e) => this.handleImageUpload(e));
-        document.getElementById('document-btn')?.addEventListener('click', () => document.getElementById('file-input-doc').click());
+        document.getElementById('document-btn')?.addEventListener('click', () => {
+            const fileInput = document.getElementById('file-input-doc');
+            if (fileInput) fileInput.click();
+        });
         document.getElementById('file-input-doc')?.addEventListener('change', (e) => this.handleDocumentUpload(e));
 
         // Tutorial
@@ -583,16 +588,18 @@ class PizarraApp {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
         
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('active');
+        if (sidebar && overlay) {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
     }
 
     closeSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
         
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
     }
 
     selectTool(tool) {
@@ -716,14 +723,14 @@ class PizarraApp {
             <button onclick="app.createNewTextBox()" class="toolbar-btn"><i class="fas fa-plus-square"></i> Crear Cuadro de Texto</button>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
-                <button onclick="app.setTextStyle('bold')" class="toolbar-btn text-style-btn"><b>B</b></button>
-                <button onclick="app.setTextStyle('italic')" class="toolbar-btn text-style-btn"><i>I</i></button>
-                <button onclick="app.setTextStyle('underline')" class="toolbar-btn text-style-btn"><u>U</u></button>
+                <button onclick="app.setTextStyle('bold')" class="toolbar-btn text-style-btn" data-style="bold"><b>B</b></button>
+                <button onclick="app.setTextStyle('italic')" class="toolbar-btn text-style-btn" data-style="italic"><i>I</i></button>
+                <button onclick="app.setTextStyle('underline')" class="toolbar-btn text-style-btn" data-style="underline"><u>U</u></button>
             </div>
             <div class="tool-option">
-                <button onclick="app.setTextAlign('left')" class="toolbar-btn text-align-btn"><i class="fas fa-align-left"></i></button>
-                <button onclick="app.setTextAlign('center')" class="toolbar-btn text-align-btn"><i class="fas fa-align-center"></i></button>
-                <button onclick="app.setTextAlign('right')" class="toolbar-btn text-align-btn"><i class="fas fa-align-right"></i></button>
+                <button onclick="app.setTextAlign('left')" class="toolbar-btn text-align-btn" data-align="left"><i class="fas fa-align-left"></i></button>
+                <button onclick="app.setTextAlign('center')" class="toolbar-btn text-align-btn" data-align="center"><i class="fas fa-align-center"></i></button>
+                <button onclick="app.setTextAlign('right')" class="toolbar-btn text-align-btn" data-align="right"><i class="fas fa-align-right"></i></button>
             </div>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
@@ -868,7 +875,8 @@ class PizarraApp {
         
         if (scaleSlider) {
             scaleSlider.addEventListener('input', (e) => {
-                document.getElementById('scale-value').textContent = e.target.value + '%';
+                const scaleValue = document.getElementById('scale-value');
+                if (scaleValue) scaleValue.textContent = e.target.value + '%';
                 this.applyDocumentTransform('scale', e.target.value);
             });
         }
@@ -881,39 +889,11 @@ class PizarraApp {
     }
 
     setTextStyle(style) {
-        if (!this.selectedElement) {
-            this.showNotification('Selecciona un cuadro de texto para aplicar un estilo.');
-            return;
-        }
-        const elementId = this.selectedElement.id.replace('element-', '');
-        const element = this.findElementById(elementId);
-
-        if (element && element.type === 'text') {
-            const styleProp = style === 'bold' ? 'fontWeight' : (style === 'italic' ? 'fontStyle' : 'textDecoration');
-            const activeValue = style === 'bold' ? 'bold' : (style === 'italic' ? 'italic' : 'underline');
-            const defaultValue = style === 'bold' ? 'normal' : (style === 'italic' ? 'normal' : 'none');
-
-            if (element.styles[styleProp] === activeValue) {
-                element.styles[styleProp] = defaultValue;
-            } else {
-                element.styles[styleProp] = activeValue;
-            }
-            this.updateTextElement(this.selectedElement, element);
-        }
+        this.applyTextTransform(style, null);
     }
 
     setTextAlign(align) {
-        if (!this.selectedElement) {
-            this.showNotification('Selecciona un cuadro de texto para cambiar la alineación.');
-            return;
-        }
-        const elementId = this.selectedElement.id.replace('element-', '');
-        const element = this.findElementById(elementId);
-
-        if (element && element.type === 'text') {
-            element.styles.textAlign = align;
-            this.updateTextElement(this.selectedElement, element);
-        }
+        this.applyTextTransform('textAlign', align);
     }
 
     applyImageTransform(property, value) {
@@ -935,7 +915,7 @@ class PizarraApp {
 
     applyTextTransform(property, value) {
         if (this.selectedElement) {
-            const elementId = this.selectedElement.id;
+            const elementId = this.selectedElement.id.replace('element-', '');
             const element = this.findElementById(elementId);
             
             if (element && element.type === 'text') {
@@ -965,7 +945,8 @@ class PizarraApp {
 
     applyDocumentTransform(property, value) {
         if (this.selectedElement) {
-            const element = this.findElementById(this.selectedElement.id);
+            const elementId = this.selectedElement.id.replace('element-', '');
+            const element = this.findElementById(elementId);
             if (element && element.type === 'document') {
                 element[property] = property === 'scale' ? parseInt(value) : parseInt(value);
                 this.renderElement(element);
@@ -1436,11 +1417,13 @@ class PizarraApp {
     }
 
     triggerImageUpload() {
-        document.getElementById('file-input-img').click();
+        const fileInput = document.getElementById('file-input-img');
+        if (fileInput) fileInput.click();
     }
 
     triggerDocumentUpload() {
-        document.getElementById('file-input-doc').click();
+        const fileInput = document.getElementById('file-input-doc');
+        if (fileInput) fileInput.click();
     }
 
     handleImageUpload(e) {
@@ -1481,9 +1464,15 @@ class PizarraApp {
     // ===== GESTIÓN DE CAPAS =====
     toggleLayersPanel(forceState) {
         const panel = document.getElementById('layers-panel');
-        panel.classList.toggle('active', forceState);
-        if (panel.classList.contains('active')) {
-            this.renderLayersPanel();
+        if (panel) {
+            if (forceState !== undefined) {
+                panel.classList.toggle('active', forceState);
+            } else {
+                panel.classList.toggle('active');
+            }
+            if (panel.classList.contains('active')) {
+                this.renderLayersPanel();
+            }
         }
     }
 
@@ -1541,6 +1530,32 @@ class PizarraApp {
         }
         return actions;
     }
+
+    // MÉTODOS DE GESTIÓN DE CAPAS (FALTANTES)
+    toggleLayerVisibility(layerId) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer) {
+            layer.visible = !layer.visible;
+            this.redrawAllElements();
+            this.renderLayersPanel();
+        }
+    }
+
+    toggleLayerLock(layerId) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer) {
+            layer.locked = !layer.locked;
+            this.renderLayersPanel();
+        }
+    }
+
+    renameLayer(layerId, newName) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer && newName.trim()) {
+            layer.name = newName.trim();
+            this.renderLayersPanel();
+        }
+    }
     
     addLayer() {
         const newLayer = {
@@ -1552,6 +1567,7 @@ class PizarraApp {
         };
         this.board.layers.push(newLayer);
         this.setActiveLayer(newLayer.id);
+        this.renderLayersPanel();
     }
 
     deleteLayer(layerId) {
@@ -1575,31 +1591,6 @@ class PizarraApp {
 
     getActiveLayer() {
         return this.board.layers.find(l => l.id === this.activeLayerId);
-    }
-
-    renameLayer(layerId, newName) {
-        const layer = this.board.layers.find(l => l.id === layerId);
-        if (layer && newName.trim()) {
-            layer.name = newName.trim();
-        }
-        this.renderLayersPanel();
-    }
-
-    toggleLayerVisibility(layerId) {
-        const layer = this.board.layers.find(l => l.id === layerId);
-        if (layer) {
-            layer.visible = !layer.visible;
-            this.redrawAllElements();
-            this.renderLayersPanel();
-        }
-    }
-
-    toggleLayerLock(layerId) {
-        const layer = this.board.layers.find(l => l.id === layerId);
-        if (layer) {
-            layer.locked = !layer.locked;
-            this.renderLayersPanel();
-        }
     }
 
     // ===== MÉTODOS AUXILIARES =====
@@ -1762,7 +1753,9 @@ class PizarraApp {
         const drawingLayer = document.getElementById('drawing-layer');
         
         if (drawingLayer) drawingLayer.innerHTML = '';
-        canvasContent.querySelectorAll('.canvas-element').forEach(el => el.remove());
+        if (canvasContent) {
+            canvasContent.querySelectorAll('.canvas-element').forEach(el => el.remove());
+        }
 
         this.board.layers.forEach(layer => {
             if (layer.visible) {
@@ -1777,30 +1770,27 @@ class PizarraApp {
         });
     }
 
-    updateCanvasTransform() {
-        const canvasContent = document.querySelector('.canvas-content');
-        if (canvasContent) {
-            canvasContent.style.transform = `translate(${this.board.pan.x}px, ${this.board.pan.y}px) scale(${this.board.zoom})`;
-        }
-    }
-
+    // MÉTODO FALTANTE PARA ZOOM/PAN
     handleWheel(e) {
         e.preventDefault();
         const zoomIntensity = 0.1;
-        const oldZoom = this.board.zoom;
-        const mouseX = e.clientX;
-        const mouseY = e.clientY;
-
-        const newZoom = oldZoom - (e.deltaY > 0 ? zoomIntensity : -zoomIntensity);
-        this.board.zoom = Math.max(0.1, Math.min(newZoom, 5));
-
-        const panXBeforeZoom = (mouseX - this.board.pan.x) / oldZoom;
-        const panYBeforeZoom = (mouseY - this.board.pan.y) / oldZoom;
-
-        this.board.pan.x = mouseX - panXBeforeZoom * this.board.zoom;
-        this.board.pan.y = mouseY - panYBeforeZoom * this.board.zoom;
-
+        const wheel = e.deltaY < 0 ? 1 : -1;
+        const zoom = Math.exp(wheel * zoomIntensity);
+        
+        this.board.zoom *= zoom;
+        this.board.zoom = Math.max(0.1, Math.min(5, this.board.zoom)); // Limitar zoom entre 0.1x y 5x
+        
         this.updateCanvasTransform();
+    }
+
+    updateCanvasTransform() {
+        const canvas = document.getElementById('canvas');
+        if (canvas) {
+            const canvasContent = canvas.querySelector('.canvas-content');
+            if (canvasContent) {
+                canvasContent.style.transform = `translate(${this.board.pan.x}px, ${this.board.pan.y}px) scale(${this.board.zoom})`;
+            }
+        }
     }
 
     throttle(func, limit) {
@@ -1825,13 +1815,19 @@ class PizarraApp {
 
     // ===== TUTORIAL =====
     openTutorial() {
-        document.getElementById('tutorial-modal').classList.add('active');
-        this.currentSlide = 0;
-        this.updateTutorialSlide();
+        const tutorialModal = document.getElementById('tutorial-modal');
+        if (tutorialModal) {
+            tutorialModal.classList.add('active');
+            this.currentSlide = 0;
+            this.updateTutorialSlide();
+        }
     }
 
     closeTutorial() {
-        document.getElementById('tutorial-modal').classList.remove('active');
+        const tutorialModal = document.getElementById('tutorial-modal');
+        if (tutorialModal) {
+            tutorialModal.classList.remove('active');
+        }
     }
 
     prevSlide() {
@@ -2096,7 +2092,7 @@ class DrawingTool {
         this.activeToolInstance = this.tools[shape];
         if (this.activeToolInstance) {
             this.board.showNotification(`Forma: ${this.getShapeName(shape)}`);
-        this.updateCursor();
+            this.updateCursor();
         }
     }
     
@@ -2127,7 +2123,8 @@ class DrawingTool {
         if (widthSlider) {
             widthSlider.addEventListener('input', (e) => {
                 this.config.width = parseInt(e.target.value, 10);
-                document.getElementById('width-value').textContent = `${e.target.value}px`;
+                const widthValue = document.getElementById('width-value');
+                if (widthValue) widthValue.textContent = `${e.target.value}px`;
                 this.updateCursor();
             });
         }
@@ -2135,7 +2132,8 @@ class DrawingTool {
         if (opacitySlider) {
             opacitySlider.addEventListener('input', (e) => {
                 this.config.opacity = parseInt(e.target.value, 10);
-                document.getElementById('opacity-value').textContent = `${e.target.value}%`;
+                const opacityValue = document.getElementById('opacity-value');
+                if (opacityValue) opacityValue.textContent = `${e.target.value}%`;
             });
         }
 
