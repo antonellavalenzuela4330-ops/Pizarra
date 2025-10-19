@@ -349,46 +349,75 @@ class PizarraApp {
     }
 
     async saveCurrentProject() {
-        if (this.currentProject && !this.isSaving) {
-            this.isSaving = true;
-            
-            this.currentProject.elements = this.getAllCanvasElements();
-            this.currentProject.modified = new Date().toISOString();
-            const projectNameInput = document.getElementById('project-name');
-            this.currentProject.name = projectNameInput ? projectNameInput.value : 'Proyecto sin nombre';
-            
-            try {
-                const response = await fetch('api/save_project.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        projectId: this.currentProject.id,
-                        nombre: this.currentProject.name,
-                        elementos: this.currentProject.elements
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.showNotification('Proyecto guardado exitosamente');
-                    
-                    // Actualizar lista de proyectos
-                    await this.loadProjects();
-                    this.updateProjectsList();
-                } else {
-                    this.showNotification('Error al guardar: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error saving project:', error);
-                this.showNotification('Error al guardar el proyecto');
-            } finally {
-                this.isSaving = false;
-            }
-        }
+    if (!this.currentProject || this.isSaving) {
+        console.log('No hay proyecto actual o ya se está guardando');
+        return;
     }
+    
+    this.isSaving = true;
+    this.showNotification('Guardando proyecto...');
+    
+    try {
+        // Actualizar datos del proyecto actual
+        this.currentProject.elements = this.getAllCanvasElements();
+        this.currentProject.modified = new Date().toISOString();
+        
+        const projectNameInput = document.getElementById('project-name');
+        if (projectNameInput) {
+            this.currentProject.name = projectNameInput.value;
+        }
+        
+        // Preparar datos para enviar
+        const saveData = {
+            projectId: this.currentProject.id,
+            nombre: this.currentProject.name,
+            elementos: this.currentProject.elements
+        };
+        
+        console.log('Enviando datos de guardado:', {
+            projectId: saveData.projectId,
+            nombre: saveData.nombre,
+            numElementos: saveData.elementos.length,
+            elementos: saveData.elementos
+        });
+        
+        const response = await fetch('api/save_project.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(saveData)
+        });
+        
+        // Verificar si la respuesta es JSON válido
+        const responseText = await response.text();
+        console.log('Respuesta del servidor:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (jsonError) {
+            console.error('Error parseando JSON:', jsonError);
+            throw new Error(`Respuesta no válida del servidor: ${responseText}`);
+        }
+        
+        if (data.success) {
+            this.showNotification('Proyecto guardado exitosamente');
+            
+            // Actualizar la lista de proyectos después de guardar
+            await this.loadProjects();
+            this.updateProjectsList();
+        } else {
+            throw new Error(data.message || 'Error desconocido al guardar');
+        }
+        
+    } catch (error) {
+        console.error('Error saving project:', error);
+        this.showNotification('Error al guardar: ' + error.message);
+    } finally {
+        this.isSaving = false;
+    }
+}
 
     getAllCanvasElements() {
         const elements = [];
