@@ -46,8 +46,11 @@ try {
         $contenido = null;
         $datos_json = [];
         
+        // CONVERSIÓN DE TIPOS: Frontend → Base de datos
+        $tipo_bd = '';
         switch ($elemento['type']) {
             case 'image':
+                $tipo_bd = 'imagen';
                 // Convertir data URL a BLOB
                 if (isset($elemento['src']) && strpos($elemento['src'], 'data:') === 0) {
                     $parts = explode(',', $elemento['src']);
@@ -63,6 +66,7 @@ try {
                 break;
                 
             case 'text':
+                $tipo_bd = 'texto';
                 $datos_json = [
                     'text' => $elemento['text'] ?? '',
                     'styles' => $elemento['styles'] ?? [
@@ -81,6 +85,7 @@ try {
                 break;
                 
             case 'drawing':
+                $tipo_bd = 'dibujo';
                 $datos_json = [
                     'path' => $elemento['path'] ?? '',
                     'style' => $elemento['style'] ?? [
@@ -95,6 +100,7 @@ try {
                 break;
                 
             case 'document':
+                $tipo_bd = 'documento';
                 if (isset($elemento['src']) && strpos($elemento['src'], 'data:') === 0) {
                     $parts = explode(',', $elemento['src']);
                     $contenido = base64_decode($parts[1]);
@@ -111,11 +117,16 @@ try {
                     'annotations' => $elemento['annotations'] ?? []
                 ];
                 break;
+                
+            default:
+                // Tipo no reconocido, saltar
+                continue 2;
         }
         
+        // USAR EL TIPO CORREGIDO PARA LA BD
         $db->guardarElemento(
             $data['projectId'],
-            $elemento['type'],
+            $tipo_bd, // ← Tipo convertido para BD
             $contenido,
             json_encode($datos_json),
             $elemento['x'] ?? 0,
