@@ -39,9 +39,28 @@ try {
     // Convertir elementos al formato del frontend
     $elements = [];
     foreach ($elementos as $elemento) {
+        // CONVERSIÓN DE TIPOS: Base de datos → Frontend
+        $tipo_frontend = '';
+        switch ($elemento['tipo']) {
+            case 'imagen':
+                $tipo_frontend = 'image';
+                break;
+            case 'texto':
+                $tipo_frontend = 'text';
+                break;
+            case 'dibujo':
+                $tipo_frontend = 'drawing';
+                break;
+            case 'documento':
+                $tipo_frontend = 'document';
+                break;
+            default:
+                $tipo_frontend = $elemento['tipo'];
+        }
+        
         $element = [
             'id' => (string)$elemento['id'],
-            'type' => $elemento['tipo'],
+            'type' => $tipo_frontend, // ← Tipo convertido para frontend
             'x' => floatval($elemento['ubicacion_x']),
             'y' => floatval($elemento['ubicacion_y']),
             'layer' => intval($elemento['capa'])
@@ -57,7 +76,21 @@ try {
         
         // Para imágenes y documentos, usar el contenido BLOB si existe
         if (in_array($elemento['tipo'], ['imagen', 'documento']) && $elemento['contenido']) {
-            $element['src'] = 'data:image/jpeg;base64,' . base64_encode($elemento['contenido']);
+            // Determinar el tipo MIME correcto
+            $mime_type = 'image/jpeg'; // por defecto para imágenes
+            if ($elemento['tipo'] === 'documento') {
+                // Para documentos, intentar determinar el tipo desde datos_json
+                $datos = json_decode($elemento['datos_json'], true);
+                $fileType = $datos['fileType'] ?? '';
+                if (strpos($fileType, 'pdf') !== false) {
+                    $mime_type = 'application/pdf';
+                } elseif (strpos($fileType, 'word') !== false || strpos($fileType, 'document') !== false) {
+                    $mime_type = 'application/msword';
+                } else {
+                    $mime_type = 'application/octet-stream';
+                }
+            }
+            $element['src'] = 'data:' . $mime_type . ';base64,' . base64_encode($elemento['contenido']);
         }
         
         $elements[] = $element;
