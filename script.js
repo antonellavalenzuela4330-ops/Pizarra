@@ -749,17 +749,17 @@ class PizarraApp {
 
     getTextToolPanel() {
         return `
-            <button onclick="app.createNewTextBox()" class="toolbar-btn"><i class="fas fa-plus-square"></i> Crear Cuadro de Texto</button>
+            <button id="create-text-box-btn" class="toolbar-btn"><i class="fas fa-plus-square"></i> Crear Cuadro de Texto</button>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
-                <button onclick="app.setTextStyle('bold')" class="toolbar-btn text-style-btn" data-style="bold"><b>B</b></button>
-                <button onclick="app.setTextStyle('italic')" class="toolbar-btn text-style-btn" data-style="italic"><i>I</i></button>
-                <button onclick="app.setTextStyle('underline')" class="toolbar-btn text-style-btn" data-style="underline"><u>U</u></button>
+                <button class="toolbar-btn text-style-btn" data-style="bold"><b>B</b></button>
+                <button class="toolbar-btn text-style-btn" data-style="italic"><i>I</i></button>
+                <button class="toolbar-btn text-style-btn" data-style="underline"><u>U</u></button>
             </div>
             <div class="tool-option">
-                <button onclick="app.setTextAlign('left')" class="toolbar-btn text-align-btn" data-align="left"><i class="fas fa-align-left"></i></button>
-                <button onclick="app.setTextAlign('center')" class="toolbar-btn text-align-btn" data-align="center"><i class="fas fa-align-center"></i></button>
-                <button onclick="app.setTextAlign('right')" class="toolbar-btn text-align-btn" data-align="right"><i class="fas fa-align-right"></i></button>
+                <button class="toolbar-btn text-align-btn" data-align="left"><i class="fas fa-align-left"></i></button>
+                <button class="toolbar-btn text-align-btn" data-align="center"><i class="fas fa-align-center"></i></button>
+                <button class="toolbar-btn text-align-btn" data-align="right"><i class="fas fa-align-right"></i></button>
             </div>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
@@ -768,6 +768,9 @@ class PizarraApp {
                     <option value="Arial">Arial</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Comic Sans MS">Comic Sans MS</option>
                 </select>
             </div>
             <div class="tool-option">
@@ -864,6 +867,8 @@ class PizarraApp {
     }
 
     setupTextToolEvents() {
+        document.getElementById('create-text-box-btn')?.addEventListener('click', () => this.createNewTextBox());
+
         const sizeSlider = document.getElementById('text-size');
         const colorPicker = document.getElementById('text-color');
         const fontSelect = document.getElementById('text-font');
@@ -968,6 +973,7 @@ class PizarraApp {
                 }
                 
                 this.updateTextElement(this.selectedElement, element);
+                this.updateTextToolbar(element);
             }
         }
     }
@@ -1388,6 +1394,25 @@ class PizarraApp {
             element.classList.add('selected');
             this.selectedElement = element;
             this.addResizeHandles(element);
+
+            const elementType = element.getAttribute('data-type');
+            if (elementType === 'text') {
+                const elementId = element.id.replace('element-', '');
+                const elementData = this.findElementById(elementId);
+                
+                if (this.selectedTool !== 'text') {
+                    this.selectTool('text');
+                } else {
+                    const toolbar = document.getElementById('toolbar');
+                    if (toolbar && !toolbar.classList.contains('open')) {
+                        toolbar.classList.add('open');
+                    }
+                }
+                
+                setTimeout(() => this.updateTextToolbar(elementData), 50);
+            } else {
+                this.deselectTool();
+            }
         }
     }
 
@@ -1395,7 +1420,6 @@ class PizarraApp {
         if (this.selectedElement) {
             this.selectedElement.classList.remove('selected');
             this.selectedElement = null;
-            this.hideToolbar();
         }
     }
 
@@ -1884,6 +1908,43 @@ class PizarraApp {
         
         indicators.forEach((indicator, index) => {
             indicator.classList.toggle('active', index === this.currentSlide);
+        });
+    }
+
+    updateTextToolbar(element) {
+        const styles = element ? element.styles : {
+            fontSize: '16px',
+            fontFamily: 'Arial',
+            color: '#000000',
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            textAlign: 'left'
+        };
+
+        const size = parseInt(styles.fontSize, 10);
+        const sizeSlider = document.getElementById('text-size');
+        const sizeValue = document.getElementById('size-value');
+        if (sizeSlider) sizeSlider.value = size;
+        if (sizeValue) sizeValue.textContent = `${size}px`;
+
+        const colorPicker = document.getElementById('text-color');
+        if (colorPicker) colorPicker.value = styles.color;
+        
+        const fontSelect = document.getElementById('text-font');
+        if (fontSelect) fontSelect.value = styles.fontFamily;
+
+        const boldBtn = document.querySelector('.text-style-btn[data-style="bold"]');
+        if (boldBtn) boldBtn.classList.toggle('active', styles.fontWeight === 'bold');
+
+        const italicBtn = document.querySelector('.text-style-btn[data-style="italic"]');
+        if (italicBtn) italicBtn.classList.toggle('active', styles.fontStyle === 'italic');
+
+        const underlineBtn = document.querySelector('.text-style-btn[data-style="underline"]');
+        if (underlineBtn) underlineBtn.classList.toggle('active', styles.textDecoration === 'underline');
+
+        document.querySelectorAll('.text-align-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.align === styles.textAlign);
         });
     }
 }
