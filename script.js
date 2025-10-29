@@ -41,6 +41,56 @@ class ActionHistory {
 }
 
 class PizarraApp {
+    initializeLayersForProject() {
+    console.log('Inicializando capas para proyecto:', this.currentProject?.id);
+    
+    // Reiniciar capas para el proyecto actual
+    this.board.layers = [{
+        id: `project-${this.currentProject?.id || 'default'}-layer-0`,
+        name: 'Capa 1',
+        elements: [],
+        visible: true,
+        locked: false
+    }];
+    
+    this.activeLayerId = this.board.layers[0].id;
+    this.currentLayer = 0;
+    
+    // Si el proyecto tiene elementos, distribuirlos en capas
+    if (this.currentProject && this.currentProject.elements) {
+        this.distributeElementsToLayers();
+    }
+    
+    console.log('Capas inicializadas:', this.board.layers);
+}
+
+distributeElementsToLayers() {
+    // Encontrar el número máximo de capas necesario
+    const maxLayer = this.currentProject.elements.reduce((max, element) => {
+        return Math.max(max, element.layer || 0);
+    }, 0);
+    
+    // Crear capas adicionales si son necesarias
+    for (let i = this.board.layers.length; i <= maxLayer; i++) {
+        this.board.layers.push({
+            id: `project-${this.currentProject.id}-layer-${i}`,
+            name: `Capa ${i + 1}`,
+            elements: [],
+            visible: true,
+            locked: false
+        });
+    }
+    
+    // Distribuir elementos a sus capas correspondientes
+    this.currentProject.elements.forEach(element => {
+        const layerIndex = element.layer || 0;
+        if (this.board.layers[layerIndex]) {
+            this.board.layers[layerIndex].elements.push(element);
+        }
+    });
+    
+    console.log('Elementos distribuidos en capas:', this.board.layers);
+}
     constructor() {
         // Optimización: inicializar solo propiedades esenciales
         this.currentProject = null;
@@ -244,32 +294,41 @@ class PizarraApp {
     }
 
     async loadProject(projectId) {
-        try {
-            const response = await fetch(`api/get_project.php?id=${projectId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                const project = {
-                    id: data.project.id.toString(),
-                    name: data.project.nombre,
-                    elements: data.elements || [],
-                    created: data.project.fecha_creacion,
-                    modified: data.project.ultima_modificacion
-                };
-                
-                this.currentProject = project;
-                this.loadCanvasElements(project.elements);
-                this.updateProjectName();
-                this.closeSidebar();
-                this.showNotification('Proyecto cargado');
-            } else {
-                this.showNotification('Error al cargar proyecto: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Error loading project:', error);
-            this.showNotification('Error al cargar proyecto');
+    try {
+        // Guardar proyecto actual antes de cambiar
+        if (this.currentProject) {
+            await this.saveCurrentProject();
         }
+        
+        const response = await fetch(`api/get_project.php?id=${projectId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const project = {
+                id: data.project.id.toString(),
+                name: data.project.nombre,
+                elements: data.elements || [],
+                created: data.project.fecha_creacion,
+                modified: data.project.ultima_modificacion
+            };
+            
+            this.currentProject = project;
+            
+            // Reiniciar sistema de capas para el nuevo proyecto
+            this.initializeLayersForProject();
+            
+            this.loadCanvasElements(project.elements);
+            this.updateProjectName();
+            this.closeSidebar();
+            this.showNotification('Proyecto cargado');
+        } else {
+            this.showNotification('Error al cargar proyecto: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error loading project:', error);
+        this.showNotification('Error al cargar proyecto');
     }
+}
 
     async deleteProject(projectId) {
         if (confirm('¿Estás seguro de que quieres eliminar este proyecto?')) {
@@ -2010,63 +2069,114 @@ class PenTool extends BaseDrawingTool {
 class EraserTool extends BaseDrawingTool {
     constructor(drawingTool) {
         super(drawingTool);
-        this.deletedInStroke = new Map(); // Usar un Map para guardar el elemento completo
+        this.deletedInStroke = new Map();
+        this.eraserSize = 20; // Tamaño fijo del borrador
     }
 
     onMouseDown(e) {
         super.onMouseDown(e);
         this.deletedInStroke.clear();
+        this.showEraserCursor(e); // Mostrar cursor de borrador
     }
 
     onMouseMove(e) {
         if (!this.isDrawing) return;
 
-        // Usar clientX/clientY porque elementsFromPoint espera coordenadas de viewport
         const { clientX, clientY } = e;
-
-        const checkAndErase = (x, y) => {
-            const elements = document.elementsFromPoint(x, y);
-            for (const el of elements) {
-                const pathElement = el.closest('path[data-id]');
-                if (pathElement && pathElement.closest('#drawing-layer')) {
-                    const elementId = pathElement.dataset.id;
-                    if (elementId && !this.deletedInStroke.has(elementId)) {
-                        const elementData = this.board.findElementById(elementId);
-                        if (elementData) {
-                            // Guardar una copia profunda del elemento antes de borrarlo
-                            this.deletedInStroke.set(elementId, JSON.parse(JSON.stringify(elementData)));
-                            this.board.internal_removeElement(elementId);
-                        }
-                    }
-                }
-            }
-        }
-        
-        checkAndErase(clientX, clientY);
+        this.eraseAtPoint(clientX, clientY);
+        this.updateEraserCursor(e); // Actualizar posición del cursor
     }
 
     onMouseUp(e) {
         if (!this.isDrawing) return;
         super.onMouseUp(e);
         
+        this.finalizeEraseAction();
+        this.hideEraserCursor(); // Ocultar cursor de borrador
+    }
+
+    eraseAtPoint(x, y) {
+        // Obtener elementos en el área del borrador
+        const elements = document.elementsFromPoint(x, y);
+        
+        for (const el of elements) {
+            const pathElement = el.closest('path[data-id]');
+            if (pathElement && pathElement.closest('#drawing-layer')) {
+                const elementId = pathElement.dataset.id;
+                
+                // Verificar que el elemento pertenece a la capa actual
+                if (elementId && !this.deletedInStroke.has(elementId)) {
+                    const elementData = this.drawingTool.board.findElementById(elementId);
+                    if (elementData && this.isElementInCurrentLayer(elementData)) {
+                        // Guardar copia del elemento antes de borrar
+                        this.deletedInStroke.set(elementId, JSON.parse(JSON.stringify(elementData)));
+                        this.drawingTool.board.internal_removeElement(elementId);
+                    }
+                }
+            }
+        }
+    }
+
+    isElementInCurrentLayer(elementData) {
+        // Verificar si el elemento está en la capa actual del proyecto
+        const currentLayerIndex = this.drawingTool.board.currentLayer;
+        return elementData.layer === currentLayerIndex;
+    }
+
+    showEraserCursor(e) {
+        this.hideEraserCursor(); // Limpiar cursor anterior
+        
+        const cursor = document.createElement('div');
+        cursor.id = 'eraser-cursor';
+        cursor.style.cssText = `
+            position: fixed;
+            width: ${this.eraserSize}px;
+            height: ${this.eraserSize}px;
+            border: 2px solid #ff0000;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.2);
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+        `;
+        document.body.appendChild(cursor);
+        this.updateEraserCursor(e);
+    }
+
+    updateEraserCursor(e) {
+        const cursor = document.getElementById('eraser-cursor');
+        if (cursor) {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        }
+    }
+
+    hideEraserCursor() {
+        const cursor = document.getElementById('eraser-cursor');
+        if (cursor) {
+            cursor.remove();
+        }
+    }
+
+    finalizeEraseAction() {
         if (this.deletedInStroke.size > 0) {
             const deletedElements = Array.from(this.deletedInStroke.values());
             const action = {
-                app: this.board,
+                app: this.drawingTool.board,
                 elements: deletedElements,
-                execute: function() { // Para Rehacer
+                execute: function() {
                     this.elements.forEach(el => this.app.internal_removeElement(el.id));
                 },
-                undo: function() { // Para Deshacer
+                undo: function() {
                     this.elements.forEach(el => this.app.internal_addDrawingElement(el));
                 }
             };
-            this.board.history.execute(action);
+            this.drawingTool.board.history.execute(action);
         }
-
         this.deletedInStroke.clear();
     }
 }
+
 
 class ShapeTool extends BaseDrawingTool {
     constructor(drawingTool) {
@@ -2206,33 +2316,42 @@ class DrawingTool {
     }
     
     setupEvents() {
-        const widthSlider = document.getElementById('draw-width');
-        const colorPicker = document.getElementById('draw-color');
-        const opacitySlider = document.getElementById('draw-opacity');
-        
-        if (widthSlider) {
-            widthSlider.addEventListener('input', (e) => {
+    const widthSlider = document.getElementById('draw-width');
+    const colorPicker = document.getElementById('draw-color');
+    const opacitySlider = document.getElementById('draw-opacity');
+    
+    if (widthSlider) {
+        widthSlider.addEventListener('input', (e) => {
+            // Si es el borrador, no cambiar el tamaño
+            if (this.activeToolName !== 'eraser') {
                 this.config.width = parseInt(e.target.value, 10);
-                const widthValue = document.getElementById('width-value');
-                if (widthValue) widthValue.textContent = `${e.target.value}px`;
-                this.updateCursor();
-            });
-        }
-        
-        if (opacitySlider) {
-            opacitySlider.addEventListener('input', (e) => {
-                this.config.opacity = parseInt(e.target.value, 10);
-                const opacityValue = document.getElementById('opacity-value');
-                if (opacityValue) opacityValue.textContent = `${e.target.value}%`;
-            });
-        }
-
-        if (colorPicker) {
-            colorPicker.addEventListener('change', (e) => {
-                this.config.color = e.target.value;
-            });
-        }
+            }
+            const widthValue = document.getElementById('width-value');
+            if (widthValue) widthValue.textContent = `${e.target.value}px`;
+            this.updateCursor();
+        });
     }
+    
+    if (opacitySlider) {
+        opacitySlider.addEventListener('input', (e) => {
+            // Si es el borrador, no cambiar la opacidad
+            if (this.activeToolName !== 'eraser') {
+                this.config.opacity = parseInt(e.target.value, 10);
+            }
+            const opacityValue = document.getElementById('opacity-value');
+            if (opacityValue) opacityValue.textContent = `${e.target.value}%`;
+        });
+    }
+
+    if (colorPicker) {
+        colorPicker.addEventListener('change', (e) => {
+            // Si es el borrador, no cambiar el color
+            if (this.activeToolName !== 'eraser') {
+                this.config.color = e.target.value;
+            }
+        });
+    }
+}
     
     get isDrawing() {
         return this.activeToolInstance ? this.activeToolInstance.isDrawing : false;
@@ -2335,16 +2454,28 @@ class DrawingTool {
         return path;
     }
     
-    getDrawingStyle() {
+   getDrawingStyle() {
+    // Para el borrador, usar estilo transparente
+    if (this.activeToolName === 'eraser') {
         return {
-            stroke: this.config.color,
-            strokeWidth: this.config.width,
+            stroke: 'transparent',
+            strokeWidth: this.eraserSize,
             fill: 'none',
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
-            opacity: this.config.opacity / 100
+            opacity: 1
         };
     }
+    
+    return {
+        stroke: this.config.color,
+        strokeWidth: this.config.width,
+        fill: 'none',
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        opacity: this.config.opacity / 100
+    };
+}
     
     calculatePathBounds(pathData) {
         if (!pathData) return { x: 0, y: 0, width: 0, height: 0 };
