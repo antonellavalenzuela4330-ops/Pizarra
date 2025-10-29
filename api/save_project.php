@@ -41,45 +41,10 @@ try {
     // Obtener elementos existentes en la base de datos
     $elementosExistentes = $db->getElementos($data['projectId']);
     
-    // Crear mapa de elementos existentes por ID
-    $elementosExistentesMap = [];
-    foreach ($elementosExistentes as $elemento) {
-        $elementosExistentesMap[$elemento['id']] = $elemento;
-    }
+    // NO LIMPIAR ELEMENTOS - en su lugar, sincronizar
 
-    // Crear mapa de elementos nuevos por ID
-    $elementosNuevosMap = [];
+    // Guardar nuevos elementos
     foreach ($data['elementos'] as $elemento) {
-        if (isset($elemento['id'])) {
-            $elementosNuevosMap[$elemento['id']] = $elemento;
-        }
-    }
-
-    // Identificar elementos a eliminar (existen en BD pero no en los nuevos datos)
-    $elementosAEliminar = [];
-    foreach ($elementosExistentesMap as $id => $elemento) {
-        if (!isset($elementosNuevosMap[$id])) {
-            $elementosAEliminar[] = $id;
-        }
-    }
-
-    // Identificar elementos a actualizar/insertar
-    $elementosAGuardar = [];
-    foreach ($data['elementos'] as $elemento) {
-        $elementosAGuardar[] = $elemento;
-    }
-
-    // ELIMINAR SOLO LOS ELEMENTOS QUE YA NO EXISTEN
-    if (!empty($elementosAEliminar)) {
-        $placeholders = str_repeat('?,', count($elementosAEliminar) - 1) . '?';
-        $sql = "DELETE FROM elementos_proyecto WHERE id IN ($placeholders)";
-        $stmt = $conexion->prepare($sql);
-        $stmt->bind_param(str_repeat('s', count($elementosAEliminar)), ...$elementosAEliminar);
-        $stmt->execute();
-    }
-
-    // ACTUALIZAR O INSERTAR ELEMENTOS
-    foreach ($elementosAGuardar as $elemento) {
         $contenido = null;
         $datos_json = [];
         
@@ -160,56 +125,21 @@ try {
                 continue 2;
         }
         
-        // VERIFICAR SI EL ELEMENTO EXISTE O ES NUEVO
-        $elementoExiste = isset($elemento['id']) && isset($elementosExistentesMap[$elemento['id']]);
-        
-        if ($elementoExiste) {
-            // ACTUALIZAR ELEMENTO EXISTENTE
-            $this->actualizarElementoExistente(
-                $elemento['id'],
-                $tipo_bd,
-                $contenido,
-                json_encode($datos_json),
-                $elemento['x'] ?? 0,
-                $elemento['y'] ?? 0,
-                $elemento['layer'] ?? 0
-            );
-        } else {
-            // INSERTAR NUEVO ELEMENTO
-            $db->guardarElemento(
-                $data['projectId'],
-                $tipo_bd,
-                $contenido,
-                json_encode($datos_json),
-                $elemento['x'] ?? 0,
-                $elemento['y'] ?? 0,
-                $elemento['layer'] ?? 0
-            );
-        }
+        // USAR EL TIPO CORREGIDO PARA LA BD
+        $db->guardarElemento(
+            $data['projectId'],
+            $tipo_bd,
+            $contenido,
+            json_encode($datos_json),
+            $elemento['x'] ?? 0,
+            $elemento['y'] ?? 0,
+            $elemento['layer'] ?? 0
+        );
     }
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
     error_log("Error en save_project.php: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
-}
-
-// Función para actualizar elemento existente
-function actualizarElementoExistente($elemento_id, $tipo, $contenido, $datos_json, $x, $y, $capa) {
-    global $conexion;
-    
-    if ($contenido === null) {
-        // Actualizar sin contenido BLOB
-        $sql = "UPDATE elementos_proyecto SET tipo = ?, datos_json = ?, ubicacion_x = ?, ubicacion_y = ?, capa = ? WHERE id = ?";
-        $stmt = $conexion->prepare($sql);
-        $stmt->bind_param("ssddis", $tipo, $datos_json, $x, $y, $capa, $elemento_id);
-    } else {
-        // Actualizar con contenido BLOB
-        $sql = "UPDATE elementos_proyecto SET tipo = ?, contenido = ?, datos_json = ?, ubicacion_x = ?, ubicacion_y = ?, capa = ? WHERE id = ?";
-        $stmt = $conexion->prepare($sql);
-        $stmt->bind_param("ssssdis", $tipo, $contenido, $datos_json, $x, $y, $capa, $elemento_id);
-    }
-    
-    return $stmt->execute();
 }
 ?>
