@@ -89,5 +89,19 @@ class DBFunctions {
         $stmt->bind_param("i", $proyecto_id);
         return $stmt->execute();
     }
+    // Agregar este método a la clase DBFunctions en db_functions.php
+public function actualizarElemento($elemento_id, $tipo, $contenido, $datos_json, $ubicacion_x, $ubicacion_y, $capa) {
+    if ($contenido === null) {
+        $sql = "UPDATE elementos_proyecto SET tipo = ?, datos_json = ?, ubicacion_x = ?, ubicacion_y = ?, capa = ? WHERE id = ?";
+        $stmt = $this->conexion->prepare($sql);
+        $stmt->bind_param("ssddis", $tipo, $datos_json, $ubicacion_x, $ubicacion_y, $capa, $elemento_id);
+    } else {
+        $sql = "UPDATE elementos_proyecto SET tipo = ?, contenido = ?, datos_json = ?, ubicacion_x = ?, ubicacion_y = ?, capa = ? WHERE id = ?";
+        $stmt = $this->conexion->prepare($sql);
+        $stmt->bind_param("ssssdis", $tipo, $contenido, $datos_json, $ubicacion_x, $ubicacion_y, $capa, $elemento_id);
+    }
+    
+    return $stmt->execute();
+}
 }
 ?>
