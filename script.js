@@ -2139,13 +2139,13 @@ class EraserTool extends BaseDrawingTool {
     constructor(drawingTool) {
         super(drawingTool);
         this.deletedInStroke = new Map();
-        this.eraserSize = 20; // Tamaño fijo del borrador
+        this.eraserSize = 20;
     }
 
     onMouseDown(e) {
         super.onMouseDown(e);
         this.deletedInStroke.clear();
-        this.showEraserCursor(e); // Mostrar cursor de borrador
+        this.showEraserCursor(e);
     }
 
     onMouseMove(e) {
@@ -2153,7 +2153,7 @@ class EraserTool extends BaseDrawingTool {
 
         const { clientX, clientY } = e;
         this.eraseAtPoint(clientX, clientY);
-        this.updateEraserCursor(e); // Actualizar posición del cursor
+        this.updateEraserCursor(e);
     }
 
     onMouseUp(e) {
@@ -2161,35 +2161,85 @@ class EraserTool extends BaseDrawingTool {
         super.onMouseUp(e);
         
         this.finalizeEraseAction();
-        this.hideEraserCursor(); // Ocultar cursor de borrador
+        this.hideEraserCursor();
     }
 
-    eraseAtPoint(x, y) {
-        // Solo eliminar la figura sin guardar copia ni preparar para deshacer
-        const elements = document.elementsFromPoint(x, y);
+    eraseAtPoint(clientX, clientY) {
+        // Obtener coordenadas del canvas
+        const canvas = document.getElementById('canvas');
+        const rect = canvas.getBoundingClientRect();
+        const pan = this.drawingTool.board.board.pan;
+        const zoom = this.drawingTool.board.board.zoom;
         
-        for (const el of elements) {
-            const pathElement = el.closest('path[data-id]');
-            if (pathElement && pathElement.closest('#drawing-layer')) {
-                const elementId = pathElement.dataset.id;
-                if (elementId) {
-                    const elementData = this.drawingTool.board.findElementById(elementId);
-                    if (elementData && this.isElementInCurrentLayer(elementData)) {
-                        this.drawingTool.board.internal_removeElement(elementId);
+        const x = (clientX - rect.left - pan.x) / zoom;
+        const y = (clientY - rect.top - pan.y) / zoom;
+
+        // Buscar elementos de dibujo en todas las capas visibles
+        this.drawingTool.board.board.layers.forEach(layer => {
+            if (!layer.visible) return;
+            
+            layer.elements.forEach(element => {
+                if (element.type === 'drawing' && this.isPointInElement(x, y, element)) {
+                    // Guardar el elemento antes de eliminarlo para poder deshacer
+                    if (!this.deletedInStroke.has(element.id)) {
+                        this.deletedInStroke.set(element.id, JSON.parse(JSON.stringify(element)));
+                        this.drawingTool.board.internal_removeElement(element.id);
+                    }
+                }
+            });
+        });
+    }
+
+    isPointInElement(x, y, element) {
+        // Verificar si el punto está cerca del path del dibujo
+        if (!element.path || element.path === '') return false;
+
+        // Calcular bounding box aproximada del path
+        const points = this.parsePathData(element.path);
+        if (points.length === 0) return false;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        
+        points.forEach(point => {
+            minX = Math.min(minX, point.x);
+            minY = Math.min(minY, point.y);
+            maxX = Math.max(maxX, point.x);
+            maxY = Math.max(maxY, point.y);
+        });
+
+        // Expandir el área de detección según el tamaño del borrador
+        const margin = this.eraserSize / 2;
+        const expandedMinX = minX - margin;
+        const expandedMinY = minY - margin;
+        const expandedMaxX = maxX + margin;
+        const expandedMaxY = maxY + margin;
+
+        // Verificar si el punto está dentro del área expandida
+        return x >= expandedMinX && x <= expandedMaxX && 
+               y >= expandedMinY && y <= expandedMaxY;
+    }
+
+    parsePathData(pathData) {
+        const points = [];
+        const commands = pathData.split(/(?=[ML])/);
+        
+        commands.forEach(command => {
+            const parts = command.slice(1).trim().split(/[\s,]+/).map(Number);
+            
+            if (command.startsWith('M') || command.startsWith('L')) {
+                for (let i = 0; i < parts.length; i += 2) {
+                    if (!isNaN(parts[i]) && !isNaN(parts[i + 1])) {
+                        points.push({ x: parts[i], y: parts[i + 1] });
                     }
                 }
             }
-        }
-    }
-
-    isElementInCurrentLayer(elementData) {
-        // Verificar si el elemento está en la capa actual del proyecto
-        const currentLayerIndex = this.drawingTool.board.currentLayer;
-        return elementData.layer === currentLayerIndex;
+        });
+        
+        return points;
     }
 
     showEraserCursor(e) {
-        this.hideEraserCursor(); // Limpiar cursor anterior
+        this.hideEraserCursor();
         
         const cursor = document.createElement('div');
         cursor.id = 'eraser-cursor';
@@ -2233,12 +2283,22 @@ class EraserTool extends BaseDrawingTool {
                     this.elements.forEach(el => this.app.internal_removeElement(el.id));
                 },
                 undo: function() {
-                    this.elements.forEach(el => this.app.internal_addDrawingElement(el));
+                    this.elements.forEach(el => {
+                        if (el.type === 'drawing') {
+                            this.app.internal_addDrawingElement(el);
+                        }
+                    });
                 }
             };
             this.drawingTool.board.history.execute(action);
+            this.drawingTool.board.showNotification(`Borrados ${deletedElements.length} elementos`);
         }
         this.deletedInStroke.clear();
+    }
+
+    isElementInCurrentLayer(elementData) {
+        const currentLayerIndex = this.drawingTool.board.currentLayer;
+        return elementData.layer === currentLayerIndex;
     }
 }
 
@@ -2369,15 +2429,15 @@ class DrawingTool {
     }
     
     updateCursor() {
-        const canvas = document.getElementById('canvas');
-        if (this.activeToolName === 'eraser') {
-            const size = Math.max(2, this.config.width);
-            const cursorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="none" stroke="black" stroke-width="1"/></svg>`;
-            canvas.style.cursor = `url('data:image/svg+xml;utf8,${encodeURIComponent(cursorSvg)}') ${size/2} ${size/2}, auto`;
-        } else {
-            canvas.style.cursor = 'crosshair';
-        }
+    const canvas = document.getElementById('canvas');
+    if (this.activeToolName === 'eraser') {
+        // Usar un cursor circular para el borrador
+        const size = this.eraserSize;
+        canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="none" stroke="red" stroke-width="1"/></svg>') ${size/2} ${size/2}, auto`;
+    } else {
+        canvas.style.cursor = 'crosshair';
     }
+}
     
     setupEvents() {
     const widthSlider = document.getElementById('draw-width');
@@ -2389,6 +2449,11 @@ class DrawingTool {
             this.config.width = parseInt(e.target.value, 10);
             const widthValue = document.getElementById('width-value');
             if (widthValue) widthValue.textContent = `${e.target.value}px`;
+            
+            // Actualizar también el tamaño del borrador
+            if (this.tools.eraser) {
+                this.tools.eraser.eraserSize = Math.max(10, this.config.width * 3);
+            }
             this.updateCursor();
         });
     }
