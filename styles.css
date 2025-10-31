@@ -1448,10 +1448,6 @@ input[type="range"]::-moz-range-thumb {
     pointer-events: none; /* Por defecto no captura eventos */
 }
 
-.canvas-element .resize-handle {
-    display: none !important;
-}
-
 /* En styles.css - agregar al final */
 .user-info {
     display: flex;
