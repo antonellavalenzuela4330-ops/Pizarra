@@ -38,22 +38,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html>
 <head>
+
     <title>Iniciar Sesión</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="auth.css">
 </head>
 <body>
-    <div class="login-container">
-        <?php if (isset($error)): ?>
-            <div class="error"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" action="">
+    <div class="auth-container">
+        <div class="auth-box">
+            <img src="img/logo2.png" alt="Logo" class="auth-logo">
             <h2>Iniciar Sesión</h2>
-            <input type="email" name="email" placeholder="Correo electrónico" required>
-            <input type="password" name="password" placeholder="Contraseña" required>
-            <button type="submit">Entrar</button>
-            <p>¿No tienes cuenta? <a href="register.php">Regístrate aquí</a></p>
-        </form>
+            
+            <?php if (isset($error)): ?>
+                <div class="error-message"><?php echo $error; ?></div>
+            <?php endif; ?>
+            
+            <form method="POST" action="">
+                <div class="input-group">
+                    <input type="email" name="email" placeholder="Correo electrónico" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit">Entrar</button>
+            </form>
+            <p class="auth-switch">¿No tienes cuenta? <a href="register.php">Regístrate aquí</a></p>
+        </div>
     </div>
 </body>
 </html>

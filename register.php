@@ -47,26 +47,37 @@ unset($_SESSION['mensaje']);
 <html>
 <head>
     <title>Registro</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="auth.css">
 </head>
 <body>
-    <div class="register-container">
-        <?php if (!empty($mensaje)): ?>
-            <div class="success"><?php echo $mensaje; ?></div>
-        <?php endif; ?>
-        
-        <?php if (!empty($error)): ?>
-            <div class="error"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" action="">
+    <div class="auth-container">
+        <div class="auth-box">
+            <img src="img/logo2.png" alt="Logo" class="auth-logo">
             <h2>Regístrate</h2>
-            <input type="text" name="nombre_usuario" placeholder="Nombre de usuario" required>
-            <input type="email" name="email" placeholder="Correo electrónico" required>
-            <input type="password" name="contraseña" placeholder="Contraseña" required>
-            <button type="submit">Registrarse</button>
-            <p>¿Ya tienes cuenta? <a href="login.php">Inicia sesión</a></p>
-        </form>
+
+            <?php if (!empty($mensaje)): ?>
+                <div class="success-message"><?php echo $mensaje; ?></div>
+            <?php endif; ?>
+            
+            <?php if (!empty($error)): ?>
+                <div class="error-message"><?php echo $error; ?></div>
+            <?php endif; ?>
+            
+            <form method="POST" action="">
+                <div class="input-group">
+                    <input type="text" name="nombre_usuario" placeholder="Nombre de usuario" required>
+                </div>
+                <div class="input-group">
+                    <input type="email" name="email" placeholder="Correo electrónico" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="contraseña" placeholder="Contraseña" required>
+                </div>
+                <button type="submit">Registrarse</button>
+            </form>
+            <p class="auth-switch">¿Ya tienes cuenta? <a href="login.php">Inicia sesión</a></p>
+        </div>
     </div>
 </body>
 </html>

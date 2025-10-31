@@ -641,10 +641,6 @@ distributeElementsToLayers() {
 
         // Inputs de archivos
         document.getElementById('file-input-img')?.addEventListener('change', (e) => this.handleImageUpload(e));
-        document.getElementById('document-btn')?.addEventListener('click', () => {
-            const fileInput = document.getElementById('file-input-doc');
-            if (fileInput) fileInput.click();
-        });
         document.getElementById('file-input-doc')?.addEventListener('change', (e) => this.handleDocumentUpload(e));
 
         // Tutorial
@@ -1340,7 +1336,46 @@ distributeElementsToLayers() {
             this.addResizeHandles(elementDiv);
         }
         
+        if (element.type === 'document' && element.fileType === 'application/pdf') {
+            this.renderPdfToElement(element, elementDiv);
+        }
+
         return elementDiv;
+    }
+
+    async renderPdfToElement(element, elementDiv) {
+        elementDiv.innerHTML = '<div class="pdf-loading">Cargando PDF...</div>';
+
+        try {
+            if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
+            }
+
+            const pdf = await pdfjsLib.getDocument(element.src).promise;
+            elementDiv.innerHTML = ''; 
+            const pagesContainer = document.createElement('div');
+            pagesContainer.className = 'pdf-pages-container';
+            elementDiv.appendChild(pagesContainer);
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL();
+                img.className = 'pdf-page-image';
+                pagesContainer.appendChild(img);
+            }
+        } catch (error) {
+            console.error('Error rendering PDF:', error);
+            elementDiv.innerHTML = '<div class="pdf-error">Error al cargar PDF</div>';
+        }
     }
 
     applyDrawingStyle(path, style) {
