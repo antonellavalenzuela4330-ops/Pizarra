@@ -210,28 +210,38 @@ distributeElementsToLayers() {
     }
 
     createLayerDrawingSurface(layerIndex) {
-    const drawingLayer = document.getElementById('drawing-layer');
-    const defs = document.getElementById('drawing-defs');
-    if (!drawingLayer || !defs) return;
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (!drawingLayer) {
+            console.error('Error crítico: El SVG principal "drawing-layer" no se encontró en el DOM.');
+            return;
+        }
 
-    // Verificar si la máscara ya existe para evitar duplicados
-    if (!document.getElementById(`mask-layer-${layerIndex}`)) {
-        const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
-        mask.id = `mask-layer-${layerIndex}`;
-        mask.innerHTML = `<rect width="100%" height="100%" fill="white" />`;
-        defs.appendChild(mask);
-    }
+        // Asegurar que exista el contenedor de definiciones <defs>
+        let defs = drawingLayer.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            // Insertar <defs> al principio del SVG
+            drawingLayer.insertBefore(defs, drawingLayer.firstChild);
+        }
 
-    // Verificar si el grupo ya existe para evitar duplicados
-    if (!document.getElementById(`g-layer-${layerIndex}`)) {
-        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.id = `g-layer-${layerIndex}`;
-        group.setAttribute('mask', `url(#mask-layer-${layerIndex})`);
-        drawingLayer.appendChild(group);
+        // Crear la máscara para el borrador si no existe
+        let mask = document.getElementById(`mask-layer-${layerIndex}`);
+        if (!mask) {
+            mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+            mask.id = `mask-layer-${layerIndex}`;
+            mask.innerHTML = `<rect width="100%" height="100%" fill="white" /><g id="eraser-paths-${layerIndex}"></g>`;
+            defs.appendChild(mask);
+        }
+
+        // Crear el grupo <g> para los dibujos de la capa si no existe
+        let group = document.getElementById(`g-layer-${layerIndex}`);
+        if (!group) {
+            group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.id = `g-layer-${layerIndex}`;
+            group.setAttribute('mask', `url(#mask-layer-${layerIndex})`);
+            drawingLayer.appendChild(group);
+        }
     }
-    
-    drawingLayer.style.zIndex = (layerIndex * 10) + 5;
-}
 
     initializeToolPanel() {
         const toolbar = document.getElementById('toolbar');
@@ -1354,7 +1364,12 @@ distributeElementsToLayers() {
     internal_addDrawingElement(elementData) {
         const activeLayer = this.getActiveLayer();
         if (activeLayer) {
-            activeLayer.elements.push(elementData);
+            // Verificar que el elemento no exista ya
+            const existingIndex = activeLayer.elements.findIndex(el => el.id === elementData.id);
+            if (existingIndex === -1) {
+                activeLayer.elements.push(elementData);
+                console.log('Elemento añadido a la capa activa:', elementData.id);
+            }
         }
         this.renderDrawingElement(elementData);
     }
@@ -1413,31 +1428,32 @@ distributeElementsToLayers() {
     // NUEVO MÉTODO ESPECÍFICO PARA DIBUJOS
     renderDrawingElement(element) {
         const layerIndex = element.layer || 0;
-        let container;
-
-        if (element.type === 'eraser_path') {
-            container = document.getElementById(`mask-layer-${layerIndex}`);
-        } else { // 'drawing'
-            container = document.getElementById(`g-layer-${layerIndex}`);
-        }
-        
+    
+        // Asegurarse de que existe el contenedor para esta capa
+        this.createLayerDrawingSurface(layerIndex);
+    
+        let container = document.getElementById(`g-layer-${layerIndex}`);
+    
         if (!container) {
-            console.warn(`Contenedor de dibujo para capa ${layerIndex} no encontrado.`);
+            console.error(`No se pudo crear ni encontrar el contenedor de dibujo para la capa ${layerIndex}.`);
             return;
         }
 
+        // Eliminar elemento existente si hay duplicado
         const existingPath = container.querySelector(`[data-id="${element.id}"]`);
         if (existingPath) {
             existingPath.remove();
         }
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        
+    
         if (typeof element.path === 'string' && !element.path.includes('NaN')) {
             path.setAttribute('d', element.path);
             path.setAttribute('data-id', element.id);
             this.applyDrawingStyle(path, element.style);
             container.appendChild(path);
+        } else {
+            console.warn('Path inválido para el elemento:', element.id);
         }
     }
 
@@ -1990,30 +2006,27 @@ distributeElementsToLayers() {
 }
 
     clearCanvas() {
-    const canvasContent = document.querySelector('.canvas-content');
-    if (!canvasContent) return;
+        const activeLayer = this.getActiveLayer();
+        if (activeLayer && activeLayer.elements) {
+            // Vaciar la lista de elementos de la capa
+            activeLayer.elements = [];
+            
+            // Limpiar el contenedor SVG directamente
+            const layerIndex = this.board.currentLayer || 0;
+            const container = document.getElementById(`g-layer-${layerIndex}`);
+            if (container) {
+                container.innerHTML = '';
+            }
+            
+            // También limpiar las rutas del borrador de la máscara
+            const eraserPaths = document.getElementById(`eraser-paths-${layerIndex}`);
+            if (eraserPaths) {
+                eraserPaths.innerHTML = '';
+            }
 
-    // Eliminar todos los elementos del lienzo (divs, título) excepto la capa de dibujo
-    canvasContent.querySelectorAll('.canvas-element, .canvas-title').forEach(el => el.remove());
-
-    // Limpiar completamente la capa de dibujo SVG
-    const drawingLayer = document.getElementById('drawing-layer');
-    if (drawingLayer) {
-        drawingLayer.innerHTML = '<defs id="drawing-defs"></defs>';
+            this.board.showNotification('Lienzo limpiado');
+        }
     }
-    
-    // Recrear las superficies de dibujo para todas las capas
-    this.board.layers.forEach((layer, index) => {
-        this.board.createLayerDrawingSurface(index);
-    });
-
-    // Limpiar todos los elementos de dibujo del modelo de datos
-    this.board.layers.forEach(layer => {
-        layer.elements = layer.elements.filter(el => 
-            el.type !== 'drawing' && el.type !== 'eraser_path'
-        );
-    });
-}
 
     addResizeHandles(element) {
         const handles = {
@@ -2969,12 +2982,26 @@ class DrawingTool {
     }
     
     clear() {
-        const drawingLayer = document.getElementById('drawing-layer');
-        if (drawingLayer) drawingLayer.innerHTML = '';
-        this.board.layers.forEach(layer => {
-            layer.elements = layer.elements.filter(el => el.type !== 'drawing');
-        });
-        this.board.showNotification('Dibujos limpiados');
+        const activeLayer = this.board.getActiveLayer();
+        if (activeLayer && activeLayer.elements) {
+            // Vaciar la lista de elementos de la capa
+            activeLayer.elements = [];
+            
+            // Limpiar el contenedor SVG directamente
+            const layerIndex = this.board.currentLayer || 0;
+            const container = document.getElementById(`g-layer-${layerIndex}`);
+            if (container) {
+                container.innerHTML = '';
+            }
+            
+            // También limpiar las rutas del borrador de la máscara
+            const eraserPaths = document.getElementById(`eraser-paths-${layerIndex}`);
+            if (eraserPaths) {
+                eraserPaths.innerHTML = '';
+            }
+    
+            this.board.showNotification('Lienzo limpiado');
+        }
     }
     
     cleanupAfterDrawing() {
