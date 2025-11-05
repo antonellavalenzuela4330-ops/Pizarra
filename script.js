@@ -121,20 +121,13 @@ distributeElementsToLayers() {
         this.history = new ActionHistory(this);
         
         this.board = {
-            layers: [{
-                id: `layer-${Date.now()}`,
-                name: 'Capa 1',
-                elements: [],
-                visible: true,
-                locked: false
-            }],
-            backgroundColor: '#ffffff',
-            width: 3840,
-            height: 2160,
-            zoom: 1,
-            pan: { x: 0, y: 0 }
+            layers: [
+                { id: 'layer-0', name: 'Capa 1', elements: [], visible: true, locked: false }
+            ]
         };
-        this.activeLayerId = this.board.layers[0].id;
+        this.activeLayerId = 'layer-0';
+        this.currentLayer = 0;
+        this.createLayerDrawingSurface(0); // Asegurar que la capa inicial tiene superficie
 
         // Manejadores del panel de capas
         document.getElementById('layers-btn')?.addEventListener('click', () => this.toggleLayersPanel());
@@ -214,6 +207,7 @@ distributeElementsToLayers() {
         group.id = `g-layer-${layerIndex}`;
         group.setAttribute('mask', `url(#mask-layer-${layerIndex})`);
         drawingLayer.appendChild(group);
+        drawingLayer.style.zIndex = (layerIndex * 10) + 5;
     }
 
     initializeToolPanel() {
@@ -809,7 +803,6 @@ distributeElementsToLayers() {
             <button onclick="app.triggerImageUpload()" class="toolbar-btn"><i class="fas fa-file-upload"></i> Subir Imagen</button>
             <span class="toolbar-divider"></span>
             <button onclick="app.setImageMode('crop')" class="toolbar-btn"><i class="fas fa-crop-alt"></i> Recortar</button>
-            <button onclick="app.setImageMode('deform')" class="toolbar-btn"><i class="fas fa-draw-polygon"></i> Deformar</button>
             <span class="toolbar-divider"></span>
             <div class="tool-option">
                 <label>Rotación:</label>
@@ -896,11 +889,7 @@ distributeElementsToLayers() {
         return `
             <button onclick="app.triggerDocumentUpload()" class="toolbar-btn"><i class="fas fa-file-upload"></i> Subir Documento</button>
             <span class="toolbar-divider"></span>
-            <div class="tool-option">
-                <label>Escala:</label>
-                <input type="range" id="doc-scale" min="25" max="300" value="100" class="toolbar-range">
-                <span id="scale-value" class="toolbar-value">100%</span>
-            </div>
+            <button id="delete-doc-btn" class="toolbar-btn danger" title="Eliminar Documento"><i class="fas fa-trash-alt"></i> Eliminar</button>
         `;
     }
 
@@ -909,14 +898,14 @@ distributeElementsToLayers() {
             case 'image':
                 this.setupImageToolEvents();
                 break;
+            case 'document':
+                this.setupDocumentToolEvents();
+                break;
             case 'text':
                 this.setupTextToolEvents();
                 break;
             case 'draw':
                 this.setupDrawToolEvents();
-                break;
-            case 'document':
-                this.setupDocumentToolEvents();
                 break;
         }
     }
@@ -981,21 +970,178 @@ distributeElementsToLayers() {
     }
 
     setupDocumentToolEvents() {
-        const scaleSlider = document.getElementById('doc-scale');
-        
-        if (scaleSlider) {
-            scaleSlider.addEventListener('input', (e) => {
-                const scaleValue = document.getElementById('scale-value');
-                if (scaleValue) scaleValue.textContent = e.target.value + '%';
-                this.applyDocumentTransform('scale', e.target.value);
-            });
-        }
+        document.getElementById('delete-doc-btn')?.addEventListener('click', () => {
+            if (this.selectedElement) {
+                this.deleteElement(this.selectedElement.id.replace('element-', ''));
+                const toolbar = document.getElementById('toolbar');
+                if (toolbar) {
+                    toolbar.classList.remove('open');
+                }
+                this.deselectTool();
+            }
+        });
     }
 
     // ===== MÉTODOS DE HERRAMIENTAS =====
     setImageMode(mode) {
+        if (!this.selectedElement || this.selectedElement.getAttribute('data-type') !== 'image') {
+            this.showNotification('Por favor, selecciona una imagen primero.', 'warning');
+            return;
+        }
+
+        const currentMode = this.selectedElement.getAttribute('data-image-mode');
+
+        if (currentMode === mode) {
+            this.exitImageMode();
+            return;
+        }
+
+        if (currentMode) {
+            this.exitImageMode(false);
+        }
+
+        this.selectedElement.setAttribute('data-image-mode', mode);
+        this.selectedElement.classList.add(`${mode}-mode`);
         this.imageMode = mode;
-        this.showNotification(`Modo imagen: ${mode}`);
+        
+        const toolBtn = document.querySelector(`.toolbar-btn[onclick="app.setImageMode('${mode}')"]`);
+        if(toolBtn) toolBtn.classList.add('active');
+
+        if (mode === 'crop') {
+            this.initCropMode();
+        } else if (mode === 'deform') {
+            this.initDeformMode();
+        }
+    }
+
+    exitImageMode(notify = true) {
+        if (this.selectedElement) {
+            const currentMode = this.selectedElement.getAttribute('data-image-mode');
+            if (currentMode) {
+                if (currentMode === 'crop') {
+                    const cropContainer = this.selectedElement.querySelector('.crop-container');
+                    if (cropContainer) cropContainer.remove();
+                    const cropActions = this.selectedElement.querySelector('.crop-actions');
+                    if (cropActions) cropActions.remove();
+                }
+
+                const toolBtn = document.querySelector(`.toolbar-btn[onclick="app.setImageMode('${currentMode}')"]`);
+                if(toolBtn) toolBtn.classList.remove('active');
+
+                this.selectedElement.classList.remove(`${currentMode}-mode`);
+                this.selectedElement.removeAttribute('data-image-mode');
+                if(notify) this.showNotification(`Modo ${currentMode} desactivado.`, 'info');
+            }
+        }
+        this.imageMode = null;
+    }
+
+    initCropMode() {
+        if (!this.selectedElement) return;
+        
+        // Prevenir que se inicie de nuevo si ya está en modo recorte
+        if (this.selectedElement.querySelector('.crop-container')) return;
+
+        const cropContainer = document.createElement('div');
+        cropContainer.className = 'crop-container';
+        
+        const cropBox = document.createElement('div');
+        cropBox.className = 'crop-box';
+        
+        const handles = ['nw', 'ne', 'sw', 'se'];
+        handles.forEach(h => {
+            const handle = document.createElement('div');
+            handle.className = `crop-resize-handle ${h}`;
+            cropBox.appendChild(handle);
+        });
+
+        // Añadir botones de confirmar y cancelar
+        const cropActions = document.createElement('div');
+        cropActions.className = 'crop-actions';
+        cropActions.innerHTML = `
+            <button class="crop-btn confirm"><i class="fas fa-check"></i> Confirmar</button>
+            <button class="crop-btn cancel"><i class="fas fa-times"></i> Cancelar</button>
+        `;
+
+        cropActions.querySelector('.confirm').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.applyCrop();
+        });
+
+        cropActions.querySelector('.cancel').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.exitImageMode(true);
+        });
+        
+        cropContainer.appendChild(cropBox);
+        this.selectedElement.appendChild(cropContainer);
+        this.selectedElement.appendChild(cropActions);
+
+        this.makeDraggable(cropBox, cropContainer);
+        this.makeResizable(cropBox, cropContainer);
+
+        this.showNotification('Ajusta el recuadro y confirma o cancela el recorte.', 'info');
+    }
+    
+    applyCrop() {
+        if (!this.selectedElement) return;
+
+        const cropBox = this.selectedElement.querySelector('.crop-box');
+        const img = this.selectedElement.querySelector('img');
+        const elementId = this.selectedElement.id.replace('element-', '');
+        const elementData = this.findElementById(elementId);
+
+        if (!cropBox || !img || !elementData) {
+            this.exitImageMode();
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const originalImage = new Image();
+        originalImage.crossOrigin = "Anonymous";
+
+        originalImage.onload = () => {
+            const ratioX = originalImage.naturalWidth / img.clientWidth;
+            const ratioY = originalImage.naturalHeight / img.clientHeight;
+
+            const sx = cropBox.offsetLeft * ratioX;
+            const sy = cropBox.offsetTop * ratioY;
+            const sWidth = cropBox.offsetWidth * ratioX;
+            const sHeight = cropBox.offsetHeight * ratioY;
+
+            if (sWidth < 1 || sHeight < 1) {
+                this.showNotification('El área de recorte es demasiado pequeña.', 'warning');
+                return;
+            }
+
+            canvas.width = sWidth;
+            canvas.height = sHeight;
+            ctx.drawImage(originalImage, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+
+            const newDataUrl = canvas.toDataURL('image/png');
+            elementData.src = newDataUrl;
+            img.src = newDataUrl;
+
+            const newAspectRatio = sWidth / sHeight;
+            const newHeight = this.selectedElement.clientWidth / newAspectRatio;
+            
+            this.selectedElement.style.height = newHeight + 'px';
+            elementData.height = newHeight;
+            
+            this.showNotification('Imagen recortada.', 'success');
+            this.exitImageMode(false);
+        };
+
+        originalImage.src = elementData.src;
+    }
+
+    initDeformMode() {
+        this.showNotification('La función de deformar aún no está implementada.', 'info');
+    }
+
+    applyDeform() {
+        // Lógica para aplicar la deformación
     }
 
     setTextStyle(style) {
@@ -1017,7 +1163,10 @@ distributeElementsToLayers() {
                     this.selectedElement.style.transform = `rotate(${element.rotation}deg)`;
                 } else if (property === 'opacity') {
                     element.opacity = parseInt(value);
-                    this.selectedElement.style.opacity = element.opacity / 100;
+                    const img = this.selectedElement.querySelector('img');
+                    if (img) {
+                        img.style.opacity = element.opacity / 100;
+                    }
                 }
             }
         }
@@ -1283,8 +1432,10 @@ distributeElementsToLayers() {
         elementDiv.style.width = (element.width || 200) + 'px';
         elementDiv.style.height = (element.height || 200) + 'px';
         elementDiv.style.transform = `rotate(${element.rotation || 0}deg)`;
-        elementDiv.style.opacity = (element.opacity || 100) / 100;
-        elementDiv.style.zIndex = element.layer || 0;
+        if (element.type !== 'image') {
+            elementDiv.style.opacity = (element.opacity || 100) / 100;
+        }
+        elementDiv.style.zIndex = (element.layer * 10) || 0;
 
         if (element.type !== 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
@@ -1296,7 +1447,7 @@ distributeElementsToLayers() {
         switch(element.type) {
             case 'image':
                 elementDiv.innerHTML = `
-                    <img src="${element.src}" style="width: 100%; height: 100%; object-fit: contain;">
+                    <img src="${element.src}" style="width: 100%; height: 100%; object-fit: contain; opacity: ${(element.opacity || 100) / 100};">
                     <div class="image-controls">
                         <button class="image-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">×</button>
                     </div>
@@ -1613,6 +1764,9 @@ distributeElementsToLayers() {
             };
             reader.readAsDataURL(file);
         }
+
+        // Resetear el valor del input para permitir volver a subir el mismo archivo
+        e.target.value = null;
     }
 
     handleDocumentUpload(e) {
@@ -1736,14 +1890,16 @@ distributeElementsToLayers() {
     }
     
     addLayer() {
+        const newLayerIndex = this.board.layers.length;
         const newLayer = {
             id: `layer-${Date.now()}`,
-            name: `Capa ${this.board.layers.length + 1}`,
+            name: `Capa ${newLayerIndex + 1}`,
             elements: [],
             visible: true,
             locked: false
         };
         this.board.layers.push(newLayer);
+        this.createLayerDrawingSurface(newLayerIndex); // Crear la superficie de dibujo para la nueva capa
         this.setActiveLayer(newLayer.id);
         this.renderLayersPanel();
     }
@@ -1765,6 +1921,7 @@ distributeElementsToLayers() {
         this.currentLayer = this.board.layers.findIndex(l => l.id === layerId);
         this.deselectElement();
         this.renderLayersPanel();
+        this.updateLayerInteractivity();
     }
 
     getActiveLayer() {
@@ -1827,12 +1984,95 @@ distributeElementsToLayers() {
     }
 
     addResizeHandles(element) {
-        const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-        handles.forEach(pos => {
+        const handles = {
+            'top-left': 'nw',
+            'top-right': 'ne',
+            'bottom-left': 'sw',
+            'bottom-right': 'se'
+        };
+
+        for (const [pos, cursor] of Object.entries(handles)) {
             const handle = document.createElement('div');
             handle.className = `resize-handle ${pos}`;
+            handle.dataset.cursor = `${cursor}-resize`;
             element.appendChild(handle);
-        });
+
+            handle.addEventListener('mousedown', (e) => this.startResize(e, element, pos));
+        }
+    }
+
+    startResize(e, element, handlePos) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rect = element.getBoundingClientRect();
+        const canvas = document.getElementById('canvas');
+        const canvasRect = canvas.getBoundingClientRect();
+
+        const initialMouseX = e.clientX;
+        const initialMouseY = e.clientY;
+        const initialWidth = rect.width;
+        const initialHeight = rect.height;
+        const initialLeft = rect.left - canvasRect.left;
+        const initialTop = rect.top - canvasRect.top;
+
+        const doResize = (moveEvent) => {
+            const dx = moveEvent.clientX - initialMouseX;
+            const dy = moveEvent.clientY - initialMouseY;
+
+            let newWidth = initialWidth;
+            let newHeight = initialHeight;
+            let newLeft = initialLeft;
+            let newTop = initialTop;
+
+            if (handlePos.includes('right')) {
+                newWidth = initialWidth + dx;
+            } else if (handlePos.includes('left')) {
+                newWidth = initialWidth - dx;
+                newLeft = initialLeft + dx;
+            }
+
+            if (handlePos.includes('bottom')) {
+                newHeight = initialHeight + dy;
+            } else if (handlePos.includes('top')) {
+                newHeight = initialHeight - dy;
+                newTop = initialTop + dy;
+            }
+            
+            if (newWidth > 20) {
+                element.style.width = `${newWidth}px`;
+                element.style.left = `${newLeft}px`;
+            }
+            if (newHeight > 20) {
+                element.style.height = `${newHeight}px`;
+                element.style.top = `${newTop}px`;
+            }
+
+            // Actualizar contenido si es necesario (ej. imagen, texto)
+            const img = element.querySelector('img');
+            if (img) {
+                img.style.width = '100%';
+                img.style.height = '100%';
+            }
+            const textarea = element.querySelector('textarea');
+            if (textarea) {
+                textarea.style.width = '100%';
+                textarea.style.height = '100%';
+            }
+        };
+
+        const stopResize = () => {
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+            document.body.style.cursor = 'default';
+
+            const elementId = element.id.replace('element-', '');
+            this.updateElementSize(elementId, element.style.width, element.style.height);
+        };
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+        document.body.style.cursor = e.target.dataset.cursor;
     }
 
     updateElementPosition(element) {
@@ -1930,25 +2170,16 @@ distributeElementsToLayers() {
     }
 
     redrawAllElements() {
-        const canvasContent = document.querySelector('.canvas-content');
-        const drawingLayer = document.getElementById('drawing-layer');
-        
-        if (drawingLayer) drawingLayer.innerHTML = '';
-        if (canvasContent) {
-            canvasContent.querySelectorAll('.canvas-element').forEach(el => el.remove());
-        }
-
-        this.board.layers.forEach(layer => {
+        this.clearCanvas();
+        this.board.layers.forEach((layer, index) => {
+            this.createLayerDrawingSurface(index); // Asegurar que todas las superficies existan
             if (layer.visible) {
                 layer.elements.forEach(element => {
-                    if (element.type === 'drawing') {
-                        this.renderDrawingElement(element);
-                    } else {
-                        this.renderElement(element);
-                    }
+                    this.renderElement(element);
                 });
             }
         });
+        this.updateElementsVisibility(); // Sincronizar visibilidad final
     }
 
     // MÉTODO FALTANTE PARA ZOOM/PAN
@@ -2074,6 +2305,194 @@ distributeElementsToLayers() {
         document.querySelectorAll('.text-align-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.align === styles.textAlign);
         });
+    }
+
+    updateElementSize(elementId, width, height) {
+        const elementData = this.findElementById(elementId);
+        if (elementData) {
+            elementData.width = parseInt(width);
+            elementData.height = parseInt(height);
+            const elementDiv = document.getElementById(`element-${elementId}`);
+            if (elementDiv) {
+                elementData.x = parseInt(elementDiv.style.left);
+                elementData.y = parseInt(elementDiv.style.top);
+            }
+        }
+    }
+
+    makeDraggable(element, container) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        element.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            
+            let newTop = element.offsetTop - pos2;
+            let newLeft = element.offsetLeft - pos1;
+
+            const containerRect = container.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+
+            if (newLeft < 0) newLeft = 0;
+            if (newTop < 0) newTop = 0;
+            if (newLeft + elementRect.width > containerRect.width) newLeft = containerRect.width - elementRect.width;
+            if (newTop + elementRect.height > containerRect.height) newTop = containerRect.height - elementRect.height;
+            
+            element.style.top = newTop + "px";
+            element.style.left = newLeft + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    makeResizable(element, container) {
+        const handles = element.querySelectorAll('.crop-resize-handle');
+        let initialMouseX, initialMouseY, initialWidth, initialHeight, initialLeft, initialTop;
+        let currentHandle;
+
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                currentHandle = handle;
+                initialMouseX = e.clientX;
+                initialMouseY = e.clientY;
+                const rect = element.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                initialWidth = rect.width;
+                initialHeight = rect.height;
+                initialLeft = element.offsetLeft;
+                initialTop = element.offsetTop;
+                document.addEventListener('mousemove', doResize);
+                document.addEventListener('mouseup', stopResize);
+            });
+        });
+
+        const doResize = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const dx = e.clientX - initialMouseX;
+            const dy = e.clientY - initialMouseY;
+
+            let newWidth = initialWidth;
+            let newHeight = initialHeight;
+            let newLeft = initialLeft;
+            let newTop = initialTop;
+
+            if (currentHandle.classList.contains('se')) {
+                newWidth = initialWidth + dx;
+                newHeight = initialHeight + dy;
+            } else if (currentHandle.classList.contains('sw')) {
+                newWidth = initialWidth - dx;
+                newLeft = initialLeft + dx;
+                newHeight = initialHeight + dy;
+            } else if (currentHandle.classList.contains('ne')) {
+                newWidth = initialWidth + dx;
+                newHeight = initialHeight - dy;
+                newTop = initialTop + dy;
+            } else if (currentHandle.classList.contains('nw')) {
+                newWidth = initialWidth - dx;
+                newLeft = initialLeft + dx;
+                newHeight = initialHeight - dy;
+                newTop = initialTop + dy;
+            }
+
+            if (newWidth > 20) {
+                element.style.width = newWidth + 'px';
+                element.style.left = newLeft + 'px';
+            }
+            if (newHeight > 20) {
+                element.style.height = newHeight + 'px';
+                element.style.top = newTop + 'px';
+            }
+        };
+
+        const stopResize = () => {
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+        };
+    }
+
+    loadCanvasState() {
+        const savedState = localStorage.getItem('canvasState');
+        if (savedState) {
+            this.board = JSON.parse(savedState);
+            this.renderLayersPanel();
+            this.loadCanvasElements(this.board.layers.flatMap(layer => layer.elements));
+        }
+    }
+
+    updateLayerInteractivity() {
+        const activeLayerIndex = this.currentLayer;
+        const allElements = document.querySelectorAll('.canvas-element');
+
+        allElements.forEach(elementDiv => {
+            const elementId = elementDiv.id.replace('element-', '');
+            const elementData = this.findElementById(elementId);
+
+            if (elementData && elementData.layer !== activeLayerIndex) {
+                elementDiv.classList.add('locked-by-layer');
+            } else {
+                elementDiv.classList.remove('locked-by-layer');
+            }
+        });
+    }
+
+    setLayerVisibility(layerId, isVisible) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer) {
+            layer.visible = isVisible;
+            this.updateElementsVisibility();
+            this.renderLayersPanel();
+        }
+    }
+
+    updateElementsVisibility() {
+        this.board.layers.forEach((layer, index) => {
+            const isVisible = layer.visible;
+
+            // Ocultar/mostrar elementos DIV (imágenes, textos)
+            layer.elements.forEach(elementData => {
+                if (elementData.type !== 'drawing' && elementData.type !== 'eraser_path') {
+                    const elementDiv = document.getElementById(`element-${elementData.id}`);
+                    if (elementDiv) {
+                        elementDiv.style.display = isVisible ? '' : 'none';
+                    }
+                }
+            });
+
+            // Ocultar/mostrar la capa de dibujo SVG
+            const drawingGroup = document.getElementById(`g-layer-${index}`);
+            if (drawingGroup) {
+                drawingGroup.style.visibility = isVisible ? 'visible' : 'hidden';
+            }
+        });
+    }
+
+    setLayerLock(layerId, isLocked) {
+        const layer = this.board.layers.find(l => l.id === layerId);
+        if (layer) {
+            layer.locked = isLocked;
+            this.renderLayersPanel();
+        }
     }
 }
 

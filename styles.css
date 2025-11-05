@@ -435,10 +435,10 @@ header {
     box-shadow: 0 3px 6px rgba(0,0,0,0.3);
 }
 
-.resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
-.resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
-.resize-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
-.resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+.resize-handle.top-left { top: -6px; left: -6px; cursor: nw-resize; }
+.resize-handle.top-right { top: -6px; right: -6px; cursor: ne-resize; }
+.resize-handle.bottom-left { bottom: -6px; left: -6px; cursor: sw-resize; }
+.resize-handle.bottom-right { bottom: -6px; right: -6px; cursor: se-resize; }
 
 /* Controles visuales para imágenes */
 .image-controls {
@@ -1272,8 +1272,97 @@ header {
     box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.3) !important;
 }
 
+.crop-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.crop-box {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    border: 2px dashed #fff;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    cursor: move;
+}
+
+.crop-resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border: 1px solid #767676;
+}
+
+.crop-resize-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.crop-resize-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.crop-resize-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.crop-resize-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+.crop-actions {
+    position: absolute;
+    bottom: -45px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 1001;
+}
+
+.crop-btn {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.crop-btn:hover {
+    border-color: #007bff;
+    background-color: #e2e6ea;
+}
+
+.crop-btn.confirm {
+    background-color: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.crop-btn.confirm:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+.crop-btn.cancel {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.crop-btn.cancel:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.locked-by-layer {
+    pointer-events: none !important;
+    /* Se mantienen visualmente normales, pero sin interacción */
+}
+
 .canvas-element.crop-mode::after {
-    content: 'Redimensiona para recortar';
+    content: 'Ajusta el área y confirma el recorte';
     position: absolute;
     top: -30px;
     left: 50%;
