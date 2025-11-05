@@ -2829,23 +2829,31 @@ class DrawingTool {
     }
 
     finalizePath(path) {
-        if (path.length < 2) return;
-        
-        const isEraser = this.activeToolName === 'eraser';
-        const style = this.getDrawingStyle();
-        const pathData = this.createPathData(path);
-        const bounds = this.calculatePathBounds(pathData);
-        
-        const element = {
-            id: `draw-${Date.now()}`,
-            type: isEraser ? 'eraser_path' : 'drawing',
-            path: pathData, style: style,
-            x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height,
-            rotation: 0, layer: this.board.currentLayer
-        };
-        
-        this.board.addDrawingElement(element);
-    }
+    if (path.length < 2) return;
+    
+    const isEraser = this.activeToolName === 'eraser';
+    const style = this.getDrawingStyle();
+    const pathData = this.createPathData(path);
+    const bounds = this.calculatePathBounds(pathData);
+    
+    const element = {
+        id: `draw-${Date.now()}`,
+        type: 'drawing', // Siempre usar tipo 'drawing' para que se guarde igual
+        path: pathData, 
+        style: style,
+        x: bounds.x, 
+        y: bounds.y, 
+        width: bounds.width, 
+        height: bounds.height,
+        rotation: 0, 
+        layer: this.board.currentLayer
+    };
+    
+    console.log('Guardando elemento de dibujo:', element); // Para debug
+    
+    // Guardar el elemento en el sistema
+    this.board.addDrawingElement(element);
+}
 
     finalizeShape(pathData, start, end) {
         const style = this.getDrawingStyle();
