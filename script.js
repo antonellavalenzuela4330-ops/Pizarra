@@ -34,10 +34,26 @@ class ActionHistory {
     }
 
     clear() {
-        this.undoStack = [];
-        this.redoStack = [];
-        this.app.updateUndoRedoButtons();
+    const drawingLayer = document.getElementById('drawing-layer');
+    if (drawingLayer) {
+        // Limpiar todo el contenido del SVG
+        drawingLayer.innerHTML = '<defs id="drawing-defs"></defs>';
+        
+        // Recrear las superficies de dibujo para todas las capas
+        this.board.layers.forEach((layer, index) => {
+            this.board.createLayerDrawingSurface(index);
+        });
     }
+    
+    // Limpiar todos los elementos de dibujo (incluyendo los del borrador) de todas las capas
+    this.board.layers.forEach(layer => {
+        layer.elements = layer.elements.filter(el => 
+            el.type !== 'drawing' && el.type !== 'eraser_path'
+        );
+    });
+    
+    this.board.showNotification('Dibujos limpiados');
+}
 }
 
 class PizarraApp {
@@ -194,21 +210,28 @@ distributeElementsToLayers() {
     }
 
     createLayerDrawingSurface(layerIndex) {
-        const drawingLayer = document.getElementById('drawing-layer');
-        const defs = document.getElementById('drawing-defs');
-        if (!drawingLayer || !defs) return;
+    const drawingLayer = document.getElementById('drawing-layer');
+    const defs = document.getElementById('drawing-defs');
+    if (!drawingLayer || !defs) return;
 
+    // Verificar si la máscara ya existe para evitar duplicados
+    if (!document.getElementById(`mask-layer-${layerIndex}`)) {
         const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
         mask.id = `mask-layer-${layerIndex}`;
         mask.innerHTML = `<rect width="100%" height="100%" fill="white" />`;
         defs.appendChild(mask);
+    }
 
+    // Verificar si el grupo ya existe para evitar duplicados
+    if (!document.getElementById(`g-layer-${layerIndex}`)) {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.id = `g-layer-${layerIndex}`;
         group.setAttribute('mask', `url(#mask-layer-${layerIndex})`);
         drawingLayer.appendChild(group);
-        drawingLayer.style.zIndex = (layerIndex * 10) + 5;
     }
+    
+    drawingLayer.style.zIndex = (layerIndex * 10) + 5;
+}
 
     initializeToolPanel() {
         const toolbar = document.getElementById('toolbar');
@@ -495,12 +518,13 @@ distributeElementsToLayers() {
 }
 
     getAllCanvasElements() {
-        const elements = [];
-        
-        // Recorrer todas las capas y elementos
-        this.board.layers.forEach(layer => {
-            layer.elements.forEach(element => {
-                // Asegurarse de que cada elemento tenga las propiedades necesarias para la BD
+    const elements = [];
+    
+    // Recorrer todas las capas y elementos
+    this.board.layers.forEach(layer => {
+        layer.elements.forEach(element => {
+            // Solo procesar elementos válidos (incluyendo dibujos y borradores)
+            if (element && element.type) {
                 const dbElement = {
                     id: element.id,
                     type: element.type,
@@ -515,11 +539,12 @@ distributeElementsToLayers() {
                     ...this.getElementDataForDB(element)
                 };
                 elements.push(dbElement);
-            });
+            }
         });
-        
-        return elements;
-    }
+    });
+    
+    return elements;
+}
 
     getElementDataForDB(element) {
         switch(element.type) {
@@ -1938,50 +1963,57 @@ distributeElementsToLayers() {
     }
 
     loadCanvasElements(elements) {
-        this.clearCanvas();
+    this.clearCanvas();
+    
+    if (elements && elements.length > 0) {
+        // Encontrar el número máximo de capas necesario
+        const maxLayer = elements.reduce((max, el) => Math.max(max, el.layer || 0), 0);
         
-        if (elements && elements.length > 0) {
-            const maxLayer = elements.reduce((max, el) => Math.max(max, el.layer || 0), 0);
-            for (let i = 0; i <= maxLayer; i++) {
-                if (!document.getElementById(`g-layer-${i}`)) {
-                    this.createLayerDrawingSurface(i);
-                }
+        // Asegurar que todas las capas tengan superficies de dibujo
+        for (let i = 0; i <= maxLayer; i++) {
+            this.createLayerDrawingSurface(i);
+        }
+        
+        const canvas = document.getElementById('canvas');
+        const canvasContent = canvas.querySelector('.canvas-content');
+        
+        elements.forEach(element => {
+            if (element.type === 'drawing') {
+                // Renderizar tanto dibujos normales como trazos de borrador
+                this.renderDrawingElement(element);
+            } else {
+                const elementDiv = this.createElementDiv(element);
+                if (elementDiv) canvasContent.appendChild(elementDiv);
             }
-            
-            const canvas = document.getElementById('canvas');
-            const canvasContent = canvas.querySelector('.canvas-content');
-            const drawingLayer = document.getElementById('drawing-layer');
-            
-            elements.forEach(element => {
-                if (element.type === 'drawing' || element.type === 'eraser_path') {
-                    this.renderDrawingElement(element);
-                } else {
-                    const elementDiv = this.createElementDiv(element);
-                    if (elementDiv) canvasContent.appendChild(elementDiv);
-                }
-            });
-        }
-    }
-
-    clearCanvas() {
-        const canvasContent = document.querySelector('.canvas-content');
-        if (!canvasContent) return;
-
-        // Eliminar todos los elementos del lienzo (divs, título) excepto la capa de dibujo
-        canvasContent.querySelectorAll('.canvas-element, .canvas-title').forEach(el => el.remove());
-
-        // Limpiar la capa de dibujo SVG sin eliminarla
-        const drawingLayer = document.getElementById('drawing-layer');
-        if (drawingLayer) {
-            drawingLayer.innerHTML = '<defs id="drawing-defs"></defs>';
-        }
-        this.createLayerDrawingSurface(0);
-
-        // Limpiar los elementos del modelo de datos
-        this.board.layers.forEach(layer => {
-            layer.elements = [];
         });
     }
+}
+
+    clearCanvas() {
+    const canvasContent = document.querySelector('.canvas-content');
+    if (!canvasContent) return;
+
+    // Eliminar todos los elementos del lienzo (divs, título) excepto la capa de dibujo
+    canvasContent.querySelectorAll('.canvas-element, .canvas-title').forEach(el => el.remove());
+
+    // Limpiar completamente la capa de dibujo SVG
+    const drawingLayer = document.getElementById('drawing-layer');
+    if (drawingLayer) {
+        drawingLayer.innerHTML = '<defs id="drawing-defs"></defs>';
+    }
+    
+    // Recrear las superficies de dibujo para todas las capas
+    this.board.layers.forEach((layer, index) => {
+        this.board.createLayerDrawingSurface(index);
+    });
+
+    // Limpiar todos los elementos de dibujo del modelo de datos
+    this.board.layers.forEach(layer => {
+        layer.elements = layer.elements.filter(el => 
+            el.type !== 'drawing' && el.type !== 'eraser_path'
+        );
+    });
+}
 
     addResizeHandles(element) {
         const handles = {
@@ -2143,26 +2175,26 @@ distributeElementsToLayers() {
     }
 
     internal_removeElement(elementId) {
-        // Remover de todas las capas
-        this.board.layers.forEach(layer => {
-            layer.elements = layer.elements.filter(el => el.id !== elementId);
-        });
-        
-        // Remover del DOM
-        const elementDiv = document.getElementById(`element-${elementId}`);
-        if (elementDiv) elementDiv.remove();
-        
-        // Remover del SVG si es un dibujo
-        const drawingLayer = document.getElementById('drawing-layer');
-        if (drawingLayer) {
-            const path = drawingLayer.querySelector(`[data-id="${elementId}"]`);
-            if (path) path.remove();
-        }
-        
-        if (this.selectedElement && this.selectedElement.id === `element-${elementId}`) {
-            this.selectedElement = null;
-        }
+    // Remover de todas las capas
+    this.board.layers.forEach(layer => {
+        layer.elements = layer.elements.filter(el => el.id !== elementId);
+    });
+    
+    // Remover del DOM
+    const elementDiv = document.getElementById(`element-${elementId}`);
+    if (elementDiv) elementDiv.remove();
+    
+    // Remover del SVG si es un dibujo
+    const drawingLayer = document.getElementById('drawing-layer');
+    if (drawingLayer) {
+        const path = drawingLayer.querySelector(`[data-id="${elementId}"]`);
+        if (path) path.remove();
     }
+    
+    if (this.selectedElement && this.selectedElement.id === `element-${elementId}`) {
+        this.selectedElement = null;
+    }
+}
 
     hideToolbar() {
         const toolbar = document.getElementById('toolbar');
