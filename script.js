@@ -2554,170 +2554,36 @@ class PenTool extends BaseDrawingTool {
     }
 }
 
+
 class EraserTool extends BaseDrawingTool {
     constructor(drawingTool) {
         super(drawingTool);
-        this.deletedInStroke = new Map();
-        this.eraserSize = 20;
+        this.path = [];
     }
 
     onMouseDown(e) {
         super.onMouseDown(e);
-        this.deletedInStroke.clear();
-        this.showEraserCursor(e);
+        this.path = [this.startPoint];
+        this.drawingTool.createTempSvg();
     }
 
     onMouseMove(e) {
         if (!this.isDrawing) return;
-
-        const { clientX, clientY } = e;
-        this.eraseAtPoint(clientX, clientY);
-        this.updateEraserCursor(e);
+        const currentPoint = this.drawingTool.getCanvasCoordinates(e);
+        this.path.push(currentPoint);
+        this.drawingTool.drawCurrentPath(this.path);
     }
 
     onMouseUp(e) {
-        if (!this.isDrawing) return;
+        if (!this.isDrawing) {
+            return;
+        }
         super.onMouseUp(e);
-        
-        this.finalizeEraseAction();
-        this.hideEraserCursor();
-    }
-
-    eraseAtPoint(clientX, clientY) {
-        // Obtener coordenadas del canvas
-        const canvas = document.getElementById('canvas');
-        const rect = canvas.getBoundingClientRect();
-        const pan = this.drawingTool.board.board.pan;
-        const zoom = this.drawingTool.board.board.zoom;
-        
-        const x = (clientX - rect.left - pan.x) / zoom;
-        const y = (clientY - rect.top - pan.y) / zoom;
-
-        // Buscar elementos de dibujo en todas las capas visibles
-        this.drawingTool.board.board.layers.forEach(layer => {
-            if (!layer.visible) return;
-            
-            layer.elements.forEach(element => {
-                if (element.type === 'drawing' && this.isPointInElement(x, y, element)) {
-                    // Guardar el elemento antes de eliminarlo para poder deshacer
-                    if (!this.deletedInStroke.has(element.id)) {
-                        this.deletedInStroke.set(element.id, JSON.parse(JSON.stringify(element)));
-                        this.drawingTool.board.internal_removeElement(element.id);
-                    }
-                }
-            });
-        });
-    }
-
-    isPointInElement(x, y, element) {
-        // Verificar si el punto está cerca del path del dibujo
-        if (!element.path || element.path === '') return false;
-
-        // Calcular bounding box aproximada del path
-        const points = this.parsePathData(element.path);
-        if (points.length === 0) return false;
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        
-        points.forEach(point => {
-            minX = Math.min(minX, point.x);
-            minY = Math.min(minY, point.y);
-            maxX = Math.max(maxX, point.x);
-            maxY = Math.max(maxY, point.y);
-        });
-
-        // Expandir el área de detección según el tamaño del borrador
-        const margin = this.eraserSize / 2;
-        const expandedMinX = minX - margin;
-        const expandedMinY = minY - margin;
-        const expandedMaxX = maxX + margin;
-        const expandedMaxY = maxY + margin;
-
-        // Verificar si el punto está dentro del área expandida
-        return x >= expandedMinX && x <= expandedMaxX && 
-               y >= expandedMinY && y <= expandedMaxY;
-    }
-
-    parsePathData(pathData) {
-        const points = [];
-        const commands = pathData.split(/(?=[ML])/);
-        
-        commands.forEach(command => {
-            const parts = command.slice(1).trim().split(/[\s,]+/).map(Number);
-            
-            if (command.startsWith('M') || command.startsWith('L')) {
-                for (let i = 0; i < parts.length; i += 2) {
-                    if (!isNaN(parts[i]) && !isNaN(parts[i + 1])) {
-                        points.push({ x: parts[i], y: parts[i + 1] });
-                    }
-                }
-            }
-        });
-        
-        return points;
-    }
-
-    showEraserCursor(e) {
-        this.hideEraserCursor();
-        
-        const cursor = document.createElement('div');
-        cursor.id = 'eraser-cursor';
-        cursor.style.cssText = `
-            position: fixed;
-            width: ${this.eraserSize}px;
-            height: ${this.eraserSize}px;
-            border: 2px solid #ff0000;
-            border-radius: 50%;
-            background: rgba(255, 0, 0, 0.2);
-            pointer-events: none;
-            z-index: 10000;
-            transform: translate(-50%, -50%);
-        `;
-        document.body.appendChild(cursor);
-        this.updateEraserCursor(e);
-    }
-
-    updateEraserCursor(e) {
-        const cursor = document.getElementById('eraser-cursor');
-        if (cursor) {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
+        if (this.path.length > 1) {
+            this.drawingTool.finalizePath(this.path);
         }
-    }
-
-    hideEraserCursor() {
-        const cursor = document.getElementById('eraser-cursor');
-        if (cursor) {
-            cursor.remove();
-        }
-    }
-
-    finalizeEraseAction() {
-        if (this.deletedInStroke.size > 0) {
-            const deletedElements = Array.from(this.deletedInStroke.values());
-            const action = {
-                app: this.drawingTool.board,
-                elements: deletedElements,
-                execute: function() {
-                    this.elements.forEach(el => this.app.internal_removeElement(el.id));
-                },
-                undo: function() {
-                    this.elements.forEach(el => {
-                        if (el.type === 'drawing') {
-                            this.app.internal_addDrawingElement(el);
-                        }
-                    });
-                }
-            };
-            this.drawingTool.board.history.execute(action);
-            this.drawingTool.board.showNotification(`Borrados ${deletedElements.length} elementos`);
-        }
-        this.deletedInStroke.clear();
-    }
-
-    isElementInCurrentLayer(elementData) {
-        const currentLayerIndex = this.drawingTool.board.currentLayer;
-        return elementData.layer === currentLayerIndex;
+        this.drawingTool.cleanupAfterDrawing();
+        this.path = [];
     }
 }
 
@@ -2799,30 +2665,37 @@ class DrawingTool {
         };
 
         this.tools = {
-            'pen': new PenTool(this),
-            'eraser': new EraserTool(this),
-            'line': new LineTool(this),
-            'rectangle': new RectangleTool(this),
-            'circle': new CircleTool(this)
-        };
+    'pen': new PenTool(this),
+    'eraser': new PenTool(this),  // Usa la misma lógica que el lápiz
+    'line': new LineTool(this),
+    'rectangle': new RectangleTool(this),
+    'circle': new CircleTool(this)
+};
         this.activeToolInstance = this.tools['pen'];
     }
     
     setTool(tool) {
-        document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
-        const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
-        if (toolBtn) toolBtn.classList.add('active');
+    document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
+    const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
+    if (toolBtn) toolBtn.classList.add('active');
+    
+    document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
+    
+    this.activeToolName = tool;
+    this.activeShapeName = null;
+    this.activeToolInstance = this.tools[tool];
+    
+    if (this.activeToolInstance) {
+        this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
+        this.updateCursor();
         
-        document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
-        
-        this.activeToolName = tool;
-        this.activeShapeName = null;
-        this.activeToolInstance = this.tools[tool];
-        if (this.activeToolInstance) {
-            this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
-            this.updateCursor();
+        // Configuración específica para el borrador
+        if (tool === 'eraser') {
+            this.config.color = '#FFFFFF'; // Color blanco para "borrar"
+            this.config.opacity = 100; // Opacidad completa
         }
     }
+}
     
     setShape(shape) {
         document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
@@ -2850,8 +2723,8 @@ class DrawingTool {
     updateCursor() {
     const canvas = document.getElementById('canvas');
     if (this.activeToolName === 'eraser') {
-        // Usar un cursor circular para el borrador
-        const size = this.eraserSize;
+        // Crear un cursor circular para el borrador
+        const size = Math.max(10, this.config.width * 2);
         canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="none" stroke="red" stroke-width="1"/></svg>') ${size/2} ${size/2}, auto`;
     } else {
         canvas.style.cursor = 'crosshair';
@@ -2869,11 +2742,10 @@ class DrawingTool {
             const widthValue = document.getElementById('width-value');
             if (widthValue) widthValue.textContent = `${e.target.value}px`;
             
-            // Actualizar también el tamaño del borrador
-            if (this.tools.eraser) {
-                this.tools.eraser.eraserSize = Math.max(10, this.config.width * 3);
+            // Actualizar cursor del borrador si está activo
+            if (this.activeToolName === 'eraser') {
+                this.updateCursor();
             }
-            this.updateCursor();
         });
     }
     
@@ -2887,7 +2759,10 @@ class DrawingTool {
 
     if (colorPicker) {
         colorPicker.addEventListener('change', (e) => {
-            this.config.color = e.target.value;
+            // No permitir cambiar color cuando el borrador está activo
+            if (this.activeToolName !== 'eraser') {
+                this.config.color = e.target.value;
+            }
         });
     }
 }
@@ -2998,11 +2873,12 @@ class DrawingTool {
    getDrawingStyle() {
     if (this.activeToolName === 'eraser') {
         return {
-            stroke: 'black',
+            stroke: '#FFFFFF', // Color blanco para simular borrado
             strokeWidth: this.config.width,
             fill: 'none',
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
+            opacity: 1
         };
     }
     
