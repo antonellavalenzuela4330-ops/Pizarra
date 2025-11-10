@@ -1560,3 +1560,35 @@ input[type="range"]::-moz-range-thumb {
     text-decoration: none;
     color: white;
 }
+
+/* Mejoras para el input del nombre del proyecto */
+.project-name-container {
+    margin-left: 10px;
+    position: relative;
+}
+
+#project-name {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 200px;
+    transition: all 0.3s ease;
+}
+
+#project-name::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+#project-name:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.15);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+}
+
+#project-name:not(:focus):placeholder-shown {
+    background: rgba(255,255,255,0.05);
+}

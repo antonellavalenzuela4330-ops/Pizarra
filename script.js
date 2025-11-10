@@ -190,6 +190,7 @@ distributeElementsToLayers() {
     
     async init() {
         this.setupEventListeners();
+        this.setupProjectNameInput(); // Añadido para mejorar la experiencia del input del nombre de proyecto
         this.updateUndoRedoButtons();
         
         const drawingLayer = document.getElementById('drawing-layer');
@@ -207,6 +208,36 @@ distributeElementsToLayers() {
             this.createNewProject();
         }
         this.initializeToolPanel();
+    }
+
+    // Añade este método para mejorar la experiencia del input
+    setupProjectNameInput() {
+        const projectNameInput = document.getElementById('project-name');
+        if (projectNameInput) {
+            // Limpiar el placeholder al hacer focus
+            projectNameInput.addEventListener('focus', () => {
+                if (projectNameInput.value === 'Proyecto sin nombre') {
+                    projectNameInput.value = '';
+                }
+            });
+            
+            // Restaurar si está vacío al perder focus
+            projectNameInput.addEventListener('blur', () => {
+                if (projectNameInput.value.trim() === '') {
+                    projectNameInput.value = 'Proyecto sin nombre';
+                }
+            });
+            
+            // Guardar cuando se presione Enter
+            projectNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    projectNameInput.blur();
+                    if (this.currentProject) {
+                        this.saveCurrentProject();
+                    }
+                }
+            });
+        }
     }
 
     createLayerDrawingSurface(layerIndex) {
@@ -280,66 +311,76 @@ distributeElementsToLayers() {
     }
 
     async createNewProject() {
-        const projectName = document.getElementById('project-name')?.value || 'Proyecto sin nombre';
-        
-        try {
-            const response = await fetch('api/create_project.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    nombre: projectName,
-                    descripcion: ''
-                })
-            });
-            
-            const responseText = await response.text();
-
-            if (!response.ok) {
-                throw new Error(`Error del servidor: ${response.status} ${response.statusText}. Respuesta: ${responseText}`);
-            }
-            
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (jsonError) {
-                throw new Error(`La respuesta del servidor no es un JSON válido.\nRespuesta: ${responseText}`);
-            }
-            
-            if (data.success) {
-                const newProject = {
-                    id: data.projectId.toString(),
-                    name: projectName,
-                    elements: [],
-                    created: new Date().toISOString(),
-                    modified: new Date().toISOString()
-                };
-                
-                this.projects.push(newProject);
-                this.currentProject = newProject;
-                this.updateProjectsList();
-                this.clearCanvas();
-                this.history.clear();
-                
-                // Añadir el título para un proyecto nuevo y vacío
-                const canvasContent = document.querySelector('.canvas-content');
-                if (canvasContent) {
-                    const titleSpan = document.createElement('span');
-                    titleSpan.className = 'canvas-title';
-                    titleSpan.textContent = 'PIZARRA';
-                    canvasContent.appendChild(titleSpan);
-                }
-
-                this.updateProjectName();
-                this.showNotification('Proyecto creado exitosamente');
-            } else {
-                this.showNotification('Error al crear proyecto: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Error creating project:', error);
-            this.showNotification('Error al crear proyecto');
+        // Resetear el nombre del proyecto a vacío y permitir al usuario escribir
+        const projectNameInput = document.getElementById('project-name');
+        if (projectNameInput) {
+            projectNameInput.value = '';
+            projectNameInput.placeholder = 'Nombre del proyecto';
         }
+        
+        // Pequeño delay para permitir que el usuario escriba
+        setTimeout(async () => {
+            const projectName = projectNameInput?.value || 'Proyecto sin nombre';
+            
+            try {
+                const response = await fetch('api/create_project.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nombre: projectName,
+                        descripcion: ''
+                    })
+                });
+                
+                const responseText = await response.text();
+
+                if (!response.ok) {
+                    throw new Error(`Error del servidor: ${response.status} ${response.statusText}. Respuesta: ${responseText}`);
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonError) {
+                    throw new Error(`La respuesta del servidor no es un JSON válido.\nRespuesta: ${responseText}`);
+                }
+                
+                if (data.success) {
+                    const newProject = {
+                        id: data.projectId.toString(),
+                        name: projectName,
+                        elements: [],
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString()
+                    };
+                    
+                    this.projects.push(newProject);
+                    this.currentProject = newProject;
+                    this.updateProjectsList();
+                    this.clearCanvas();
+                    this.history.clear();
+                    
+                    // Añadir el título para un proyecto nuevo y vacío
+                    const canvasContent = document.querySelector('.canvas-content');
+                    if (canvasContent) {
+                        const titleSpan = document.createElement('span');
+                        titleSpan.className = 'canvas-title';
+                        titleSpan.textContent = 'PIZARRA';
+                        canvasContent.appendChild(titleSpan);
+                    }
+
+                    this.updateProjectName();
+                    this.showNotification('Proyecto creado exitosamente');
+                } else {
+                    this.showNotification('Error al crear proyecto: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error creating project:', error);
+                this.showNotification('Error al crear proyecto');
+            }
+        }, 100);
     }
 
     async loadProject(projectId) {
@@ -1428,14 +1469,21 @@ distributeElementsToLayers() {
     // NUEVO MÉTODO ESPECÍFICO PARA DIBUJOS
     renderDrawingElement(element) {
         const layerIndex = element.layer || 0;
-    
+        
         // Asegurarse de que existe el contenedor para esta capa
         this.createLayerDrawingSurface(layerIndex);
-    
-        let container = document.getElementById(`g-layer-${layerIndex}`);
-    
+        
+        let container;
+        if (element.type === 'eraser_path') {
+            // Para borradores, usar el grupo de máscara
+            container = document.getElementById(`eraser-paths-${layerIndex}`);
+        } else {
+            // Para dibujos normales, usar el grupo de dibujo
+            container = document.getElementById(`g-layer-${layerIndex}`);
+        }
+        
         if (!container) {
-            console.error(`No se pudo crear ni encontrar el contenedor de dibujo para la capa ${layerIndex}.`);
+            console.error(`No se pudo encontrar el contenedor para el elemento: ${element.id}`);
             return;
         }
 
@@ -1446,11 +1494,23 @@ distributeElementsToLayers() {
         }
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    
+        
         if (typeof element.path === 'string' && !element.path.includes('NaN')) {
             path.setAttribute('d', element.path);
             path.setAttribute('data-id', element.id);
-            this.applyDrawingStyle(path, element.style);
+            
+            if (element.type === 'eraser_path') {
+                // Estilo específico para borrador en la máscara
+                path.setAttribute('stroke', '#000000'); // Negro para la máscara
+                path.setAttribute('stroke-width', element.style.strokeWidth || 3);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('stroke-linejoin', 'round');
+            } else {
+                // Estilo normal para dibujos
+                this.applyDrawingStyle(path, element.style);
+            }
+            
             container.appendChild(path);
         } else {
             console.warn('Path inválido para el elemento:', element.id);
@@ -1909,7 +1969,8 @@ distributeElementsToLayers() {
         const layer = this.board.layers.find(l => l.id === layerId);
         if (layer) {
             layer.visible = !layer.visible;
-            this.redrawAllElements();
+            // Actualizar visibilidad sin forzar redibujo completo
+            this.updateElementsVisibility(); // Cambiado para usar el método específico
             this.renderLayersPanel();
         }
     }
@@ -1963,6 +2024,12 @@ distributeElementsToLayers() {
         this.deselectElement();
         this.renderLayersPanel();
         this.updateLayerInteractivity();
+        
+        console.log('Capa activa cambiada:', {
+            id: layerId,
+            index: this.currentLayer,
+            nombre: this.board.layers[this.currentLayer]?.name
+        });
     }
 
     getActiveLayer() {
@@ -2513,10 +2580,10 @@ distributeElementsToLayers() {
     updateElementsVisibility() {
         this.board.layers.forEach((layer, index) => {
             const isVisible = layer.visible;
-
-            // Ocultar/mostrar elementos DIV (imágenes, textos)
+            
+            // Actualizar elementos DIV
             layer.elements.forEach(elementData => {
-                if (elementData.type !== 'drawing' && elementData.type !== 'eraser_path') {
+                if (elementData.type !== 'drawing') {
                     const elementDiv = document.getElementById(`element-${elementData.id}`);
                     if (elementDiv) {
                         elementDiv.style.display = isVisible ? '' : 'none';
@@ -2524,10 +2591,10 @@ distributeElementsToLayers() {
                 }
             });
 
-            // Ocultar/mostrar la capa de dibujo SVG
+            // Actualizar capa de dibujo SVG
             const drawingGroup = document.getElementById(`g-layer-${index}`);
             if (drawingGroup) {
-                drawingGroup.style.visibility = isVisible ? 'visible' : 'hidden';
+                drawingGroup.style.display = isVisible ? '' : 'none';
             }
         });
     }
@@ -2728,17 +2795,17 @@ class DrawingTool {
     
     this.activeToolName = tool;
     this.activeShapeName = null;
-    this.activeToolInstance = this.tools[tool];
+
+    // CORRECCIÓN: Siempre usar PenTool para herramientas de trazo libre
+    if (tool === 'pen' || tool === 'eraser') {
+        this.activeToolInstance = this.tools['pen'];
+    } else {
+        this.activeToolInstance = this.tools[tool];
+    }
     
     if (this.activeToolInstance) {
         this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
         this.updateCursor();
-        
-        // Configuración específica para el borrador
-        if (tool === 'eraser') {
-            this.config.color = '#FFFFFF'; // Color blanco para "borrar"
-            this.config.opacity = 100; // Opacidad completa
-        }
     }
 }
     
@@ -2883,7 +2950,7 @@ class DrawingTool {
     
     const element = {
         id: `draw-${Date.now()}`,
-        type: 'drawing', // Siempre usar tipo 'drawing' para que se guarde igual
+        type: isEraser ? 'eraser_path' : 'drawing', // Tipo diferente para borrador
         path: pathData, 
         style: style,
         x: bounds.x, 
@@ -2894,9 +2961,7 @@ class DrawingTool {
         layer: this.board.currentLayer
     };
     
-    console.log('Guardando elemento de dibujo:', element); // Para debug
-    
-    // Guardar el elemento en el sistema
+    console.log('Guardando elemento:', { tipo: element.type, esBorrador: isEraser });
     this.board.addDrawingElement(element);
 }
 
@@ -2926,12 +2991,13 @@ class DrawingTool {
    getDrawingStyle() {
     if (this.activeToolName === 'eraser') {
         return {
-            stroke: '#FFFFFF', // Color blanco para simular borrado
+            stroke: '#FFFFFF',
             strokeWidth: this.config.width,
             fill: 'none',
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
-            opacity: 1
+            opacity: 1,
+            isEraser: true // Marcar como borrador
         };
     }
     
@@ -2941,7 +3007,8 @@ class DrawingTool {
         fill: 'none',
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
-        opacity: this.config.opacity / 100
+        opacity: this.config.opacity / 100,
+        isEraser: false
     };
 }
     
