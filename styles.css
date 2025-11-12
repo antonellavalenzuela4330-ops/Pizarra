@@ -1688,32 +1688,3 @@ input[type="range"]::-moz-range-thumb {
 #add-layer-btn:hover {
     background: #00acc1;
 }
-
-/* Asegurar que imágenes, textos y documentos estén por encima del SVG de dibujo */
-.canvas-element[data-type="image"],
-.canvas-element[data-type="text"], 
-.canvas-element[data-type="document"] {
-    z-index: 100 !important; /* Alto z-index para estar sobre dibujos */
-    pointer-events: auto !important;
-}
-
-/* El SVG de dibujo debe estar debajo de otros elementos */
-#drawing-layer {
-    z-index: 1 !important; /* Bajo z-index para estar debajo */
-    pointer-events: none !important;
-}
-
-/* Los elementos dentro del canvas-content deben respetar el z-index */
-.canvas-content {
-    position: relative;
-}
-
-.canvas-content > .canvas-element {
-    position: absolute;
-}
-
-/* Asegurar que los controles de elementos estén siempre visibles */
-.image-controls,
-.text-controls {
-    z-index: 1000 !important;
-}
