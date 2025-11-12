@@ -128,26 +128,37 @@ if (!isset($_SESSION['usuario_id'])) {
                 <div class="tutorial-slide active" data-slide="0">
                     <h3>Bienvenido a la Pizarra Digital</h3>
                     <p>Esta es una pizarra interactiva donde puedes crear, editar y guardar proyectos de manera dinámica.</p>
+                     <img src="img/tutorialprincipal.png" alt="principal" style="width:350px; height:150px">
                 </div>
                 <div class="tutorial-slide" data-slide="1">
                     <h3>Menú de Proyectos</h3>
                     <p>Haz clic en el botón de menú para ver todos tus proyectos guardados, crear nuevos, abrir, eliminar o duplicar proyectos existentes.</p>
+                    <img src="img/tutorialproyectos.png" alt="proyecto" style="width: 350px; height: 150px">
                 </div>
                 <div class="tutorial-slide" data-slide="2">
                     <h3>Herramientas de Imagen</h3>
                     <p>Inserta imágenes y modifícalas: mueve, cambia el tamaño, recorta, deforma, rota, cambia de capa y ajusta la opacidad.</p>
+                    <img src="img/tutorialimagen.png" alt="imagen" style="width: 350px; height: 150px">
                 </div>
                 <div class="tutorial-slide" data-slide="3">
                     <h3>Herramientas de Texto</h3>
                     <p>Agrega cuadros de texto con opciones completas: mueve, redimensiona, modifica fuente, color, estilo y rota.</p>
+                    <img src="img/tutorialtexto.png"alt="texto" style="width: 350px; height: 150px">
                 </div>
                 <div class="tutorial-slide" data-slide="4">
                     <h3>Herramienta de Dibujo</h3>
                     <p>Dibuja libremente con diferentes tipos de trazo, grosor y colores. Incluye borrador integrado.</p>
+                    <img src="img/tutorialdibujar.png" alt="dibujar" style="width: 350px; height: 150px">
                 </div>
                 <div class="tutorial-slide" data-slide="5">
                     <h3>Documentos</h3>
                     <p>Inserta archivos Word o PDF, visualízalos, muévelos y usa las herramientas de dibujo y texto sobre ellos.</p>
+                    <img src="img/tutorialdocumento.png" alt="documento" style="width: 350px; height: 150px">
+                </div>
+                <div class="tutorial-slide" data-slide="6">
+                    <h3>Gestión de Capas</h3>
+                    <p>Organiza tus elementos en capas para controlar su visibilidad y orden. Cambia el orden de las capas y ajusta la opacidad de cada una.</p>
+                    <img src="img/tutorialcapas.png" alt="capas" style="width: 350px; height: 150px">
                 </div>
             </div>
             <div class="tutorial-navigation">
