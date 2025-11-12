@@ -180,6 +180,10 @@ distributeElementsToLayers() {
                 canvas.style.cursor = 'default';
             }
         });
+        // Configurar soporte táctil para dispositivos móviles
+        // Esto conecta los eventos touch a los manejadores de mouse para
+        // mejorar la experiencia en pantallas táctiles.
+        this.setupTouchEvents();
         
         // Usar requestAnimationFrame para inicialización no crítica
         requestAnimationFrame(() => this.init());
@@ -208,6 +212,59 @@ distributeElementsToLayers() {
             this.createNewProject();
         }
         this.initializeToolPanel();
+    }
+
+    // ===== Eventos táctiles (para dispositivos móviles) =====
+    setupTouchEvents() {
+        const canvas = document.getElementById('canvas');
+        if (!canvas) return;
+        // Eventos táctiles para el canvas
+        canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+        canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+        canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        
+        // Prevenir el zoom con doble toque y multitouch
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches && e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
+
+    handleTouchStart(e) {
+        if (!e) return;
+        if (e.touches && e.touches.length === 1) {
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true,
+                cancelable: true
+            });
+            // Disparar como si fuera un mousedown
+            this.handleMouseDown(mouseEvent);
+        }
+        e.preventDefault();
+    }
+
+    handleTouchMove(e) {
+        if (!e) return;
+        if (e.touches && e.touches.length === 1) {
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                bubbles: true,
+                cancelable: true
+            });
+            this.handleMouseMove(mouseEvent);
+        }
+        e.preventDefault();
+    }
+
+    handleTouchEnd(e) {
+        const mouseEvent = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
+        this.handleMouseUp(mouseEvent);
     }
 
     // Añade este método para mejorar la experiencia del input
@@ -1713,7 +1770,15 @@ distributeElementsToLayers() {
             return;
         }
 
-        const elementDiv = e.target.closest('.canvas-element');
+        // Para dispositivos táctiles, seleccionar elemento inmediatamente
+        if ('ontouchstart' in window) {
+            const elementDivTouch = e.target && e.target.closest ? e.target.closest('.canvas-element') : null;
+            if (elementDivTouch) {
+                this.selectElement(e, elementDivTouch);
+            }
+        }
+
+        const elementDiv = e.target && e.target.closest ? e.target.closest('.canvas-element') : null;
         if (elementDiv) {
             this.selectElement(e, elementDiv);
             this.dragStart.x = e.clientX;

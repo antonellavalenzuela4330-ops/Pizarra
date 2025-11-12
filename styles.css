@@ -1688,3 +1688,385 @@ input[type="range"]::-moz-range-thumb {
 #add-layer-btn:hover {
     background: #00acc1;
 }
+
+/* ===== RESPONSIVE STYLES ===== */
+
+/* Tablets y pantallas medianas */
+@media (max-width: 1024px) {
+    .header-content {
+        padding: 10px 15px;
+    }
+
+    .header-left, .header-right {
+        gap: 10px;
+    }
+
+    #project-name {
+        min-width: 150px;
+    }
+
+    .toolbar-content {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .toolbar-btn {
+        font-size: 10px;
+        padding: 5px 8px;
+    }
+
+    .tool-option {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .tool-option label {
+        font-size: 10px;
+    }
+
+    .toolbar-range {
+        width: 60px;
+    }
+
+    .toolbar-value {
+        font-size: 10px;
+    }
+}
+
+/* Móviles y pantallas pequeñas */
+@media (max-width: 768px) {
+    .header-content {
+        padding: 8px 10px;
+        flex-wrap: wrap;
+    }
+
+    .header-left, .header-right {
+        gap: 8px;
+    }
+
+    .logo img {
+        width: 70px !important;
+    }
+
+    #project-name {
+        min-width: 120px;
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    .header-btn, .tool-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .header-btn img, .tool-btn img {
+        width: 18px;
+        height: 18px;
+    }
+
+    .user-info {
+        font-size: 12px;
+    }
+
+    .logout-btn {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    /* Sidebar en móviles */
+    .sidebar {
+        width: 100%;
+        left: -100%;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    .sidebar-header {
+        padding: 15px;
+    }
+
+    .sidebar-content {
+        padding: 15px;
+    }
+
+    .project-item {
+        padding: 12px;
+    }
+
+    .project-actions {
+        opacity: 1; /* Mostrar siempre en móviles */
+    }
+
+    /* Toolbar en móviles */
+    .toolbar {
+        padding: 0 10px;
+    }
+
+    .toolbar.open {
+        max-height: 100px; /* Aumentar la altura para permitir scroll */
+        overflow-y: auto;
+    }
+
+    .toolbar-content {
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: flex-start;
+    }
+
+    .toolbar-btn {
+        font-size: 10px;
+        padding: 4px 6px;
+        min-height: 30px;
+    }
+
+    .tool-option {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .tool-option label {
+        font-size: 9px;
+    }
+
+    .toolbar-range {
+        width: 50px;
+    }
+
+    .toolbar-value {
+        font-size: 9px;
+    }
+
+    /* Canvas en móviles */
+    .canvas {
+        min-height: calc(100vh - 50px);
+    }
+
+    .canvas-content {
+        min-height: calc(100vh - 50px);
+    }
+
+    .canvas-title {
+        font-size: 36px;
+    }
+
+    /* Tutorial button en móviles */
+    .tutorial-btn {
+        bottom: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    /* Modal de tutorial en móviles */
+    .tutorial-content {
+        width: 95%;
+        margin: 10px;
+    }
+
+    .tutorial-header {
+        padding: 15px;
+    }
+
+    .tutorial-body {
+        padding: 20px;
+    }
+
+    .tutorial-slide h3 {
+        font-size: 18px;
+    }
+
+    .tutorial-slide p {
+        font-size: 14px;
+    }
+
+    .tutorial-navigation {
+        padding: 15px;
+    }
+
+    .nav-btn {
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+
+    /* Paneles flotantes en móviles */
+    .floating-panel {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+    }
+
+    #layers-panel {
+        top: 60px;
+        right: 5%;
+        left: 5%;
+        width: 90%;
+    }
+
+    /* Ajustes para elementos del canvas en móviles */
+    .canvas-element {
+        min-width: 50px;
+        min-height: 50px;
+    }
+
+    .text-element {
+        font-size: 14px; /* Tamaño de fuente más pequeño para móviles */
+    }
+
+    .image-controls, .text-controls {
+        top: -35px;
+        padding: 4px 8px;
+    }
+
+    .image-control-btn, .text-control-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+
+    .resize-handle {
+        width: 10px;
+        height: 10px;
+    }
+
+    .resize-handle.top-left { top: -5px; left: -5px; }
+    .resize-handle.top-right { top: -5px; right: -5px; }
+    .resize-handle.bottom-left { bottom: -5px; left: -5px; }
+    .resize-handle.bottom-right { bottom: -5px; right: -5px; }
+}
+
+/* Móviles muy pequeños */
+@media (max-width: 480px) {
+    .header-content {
+        padding: 5px 8px;
+    }
+
+    .header-left, .header-right {
+        gap: 5px;
+    }
+
+    .logo img {
+        width: 60px !important;
+    }
+
+    #project-name {
+        min-width: 100px;
+        font-size: 11px;
+        padding: 5px 6px;
+    }
+
+    .header-btn, .tool-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .header-btn img, .tool-btn img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .user-info {
+        font-size: 11px;
+    }
+
+    .logout-btn {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+
+    .toolbar.open {
+        max-height: 120px; /* Aún más alto para permitir más herramientas */
+    }
+
+    .toolbar-btn {
+        font-size: 9px;
+        padding: 3px 5px;
+        min-height: 28px;
+    }
+
+    .tool-option {
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .tool-option label {
+        font-size: 8px;
+    }
+
+    .toolbar-range {
+        width: 40px;
+    }
+
+    .toolbar-value {
+        font-size: 8px;
+    }
+
+    .canvas-title {
+        font-size: 28px;
+    }
+
+    .tutorial-btn {
+        bottom: 5px;
+        right: 5px;
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+    }
+
+    /* Ocultar algunos elementos en móviles muy pequeños */
+    .user-info span:first-child {
+        display: none; /* Ocultar "Hola, [nombre]" */
+    }
+}
+
+/* Orientación landscape en móviles */
+@media (max-width: 768px) and (orientation: landscape) {
+    .header-content {
+        padding: 5px;
+    }
+
+    .toolbar.open {
+        max-height: 80px;
+    }
+
+    .canvas {
+        min-height: calc(100vh - 40px);
+    }
+
+    .canvas-content {
+        min-height: calc(100vh - 40px);
+    }
+}
+
+/* Soporte para pantallas táctiles */
+@media (hover: none) and (pointer: coarse) {
+    .resize-handle {
+        width: 16px;
+        height: 16px;
+    }
+
+    .canvas-element:hover {
+        border-color: transparent;
+    }
+
+    .canvas-element.selected {
+        border-color: #00acc1;
+    }
+
+    .image-controls, .text-controls {
+        opacity: 1; /* Mostrar siempre controles en táctil */
+    }
+
+    /* Mejorar tamaño de botones para dedos */
+    .header-btn, .tool-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .toolbar-btn {
+        min-height: 44px;
+        padding: 10px 12px;
+    }
+}
