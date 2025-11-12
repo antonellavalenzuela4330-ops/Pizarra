@@ -48,7 +48,7 @@ class ActionHistory {
     // Limpiar todos los elementos de dibujo (incluyendo los del borrador) de todas las capas
     this.app.board.layers.forEach(layer => {
         layer.elements = layer.elements.filter(el => 
-            el.type !== 'drawing' && el.type !== 'eraser'
+            el.type !== 'drawing' && el.type !== 'eraser_path'
         );
     });
     
@@ -251,6 +251,7 @@ distributeElementsToLayers() {
         let defs = drawingLayer.querySelector('defs');
         if (!defs) {
             defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            defs.id = 'drawing-defs';
             // Insertar <defs> al principio del SVG
             drawingLayer.insertBefore(defs, drawingLayer.firstChild);
         }
@@ -629,6 +630,16 @@ distributeElementsToLayers() {
                         opacity: 100
                     }
                 };
+                case 'eraser_path':
+                    return {
+                        path: element.path,
+                        style: element.style || {
+                            stroke: '#000000',
+                            strokeWidth: 3,
+                            fill: 'none',
+                            opacity: 100
+                        }
+                    };
             case 'document':
                 return {
                     src: element.src,
@@ -1472,8 +1483,15 @@ distributeElementsToLayers() {
         
         // Asegurarse de que existe el contenedor para esta capa
         this.createLayerDrawingSurface(layerIndex);
+        let container;
+        if (element.type === 'eraser_path') {
+            // Para borradores, usar el grupo de máscara (que está dentro de <defs>)
+            container = document.getElementById(`eraser-paths-${layerIndex}`);
+        } else {
+            // Para dibujos normales, usar el grupo de dibujo
+            container = document.getElementById(`g-layer-${layerIndex}`);
+        }
         
-        const container = document.getElementById(`g-layer-${layerIndex}`);
         if (!container) {
             console.error(`No se pudo encontrar el contenedor para el elemento: ${element.id}`);
             return;
@@ -1490,9 +1508,18 @@ distributeElementsToLayers() {
         if (typeof element.path === 'string' && !element.path.includes('NaN')) {
             path.setAttribute('d', element.path);
             path.setAttribute('data-id', element.id);
-            path.setAttribute('data-type', element.type); // Agregar tipo para identificación
             
-            this.applyDrawingStyle(path, element.style);
+            if (element.type === 'eraser_path') {
+                // Estilo específico para borrador en la máscara
+                path.setAttribute('stroke', '#000000'); // Negro para la máscara
+                path.setAttribute('stroke-width', element.style && element.style.strokeWidth ? element.style.strokeWidth : 3);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke-linecap', 'round');
+                path.setAttribute('stroke-linejoin', 'round');
+            } else {
+                // Estilo normal para dibujos
+                this.applyDrawingStyle(path, element.style);
+            }
             
             container.appendChild(path);
         } else {
@@ -1502,7 +1529,7 @@ distributeElementsToLayers() {
 
     createElementDiv(element) {
         // Para elementos de dibujo, no crear div, solo renderizar en SVG
-        if (element.type === 'drawing') {
+        if (element.type === 'drawing' || element.type === 'eraser_path') {
             this.renderDrawingElement(element);
             return null;
         }
@@ -1519,7 +1546,7 @@ distributeElementsToLayers() {
         if (element.type !== 'image') {
             elementDiv.style.opacity = (element.opacity || 100) / 100;
         }
-        elementDiv.style.zIndex = (element.layer * 10) || 0;
+    elementDiv.style.zIndex = 100 + (element.layer * 10) || 100;
 
         if (element.type !== 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
@@ -2029,7 +2056,7 @@ distributeElementsToLayers() {
                 if (elementDiv) elementDiv.remove();
                 
                 // Eliminar elementos de dibujo del SVG
-                if (element.type === 'drawing' || element.type === 'eraser') {
+                if (element.type === 'drawing' || element.type === 'eraser_path') {
                     const drawingLayer = document.getElementById('drawing-layer');
                     if (drawingLayer) {
                         const path = drawingLayer.querySelector(`[data-id="${element.id}"]`);
@@ -2038,10 +2065,18 @@ distributeElementsToLayers() {
                 }
             });
 
-            // 2. Eliminar la capa del array
+            // 2. Eliminar la máscara y grupo SVG de esta capa
+            const mask = document.getElementById(`mask-layer-${layerIndex}`);
+            if (mask) mask.remove();
+            const group = document.getElementById(`g-layer-${layerIndex}`);
+            if (group) group.remove();
+            const eraserPaths = document.getElementById(`eraser-paths-${layerIndex}`);
+            if (eraserPaths) eraserPaths.remove();
+
+            // 3. Eliminar la capa del array
             this.board.layers.splice(layerIndex, 1);
 
-            // 3. Si la capa activa era la que se eliminó, cambiar a otra capa
+            // 4. Si la capa activa era la que se eliminó, cambiar a otra capa
             if (this.activeLayerId === layerId) {
                 const newActiveIndex = Math.max(0, layerIndex - 1);
                 this.setActiveLayer(this.board.layers[newActiveIndex].id);
@@ -2098,7 +2133,7 @@ distributeElementsToLayers() {
         const canvasContent = canvas.querySelector('.canvas-content');
         
         elements.forEach(element => {
-            if (element.type === 'drawing') {
+            if (element.type === 'drawing' || element.type === 'eraser_path') {
                 // Renderizar tanto dibujos normales como trazos de borrador
                 this.renderDrawingElement(element);
             } else {
@@ -2978,27 +3013,28 @@ class DrawingTool {
     }
 
     finalizePath(path) {
-        if (path.length < 2) return;
+            if (path.length < 2) return;
 
-        const isEraser = this.activeToolName === 'eraser';
-        const style = this.getDrawingStyle();
-        const pathData = this.createPathData(path);
-        const bounds = this.calculatePathBounds(pathData);
+            const isEraser = this.activeToolName === 'eraser';
+            const style = this.getDrawingStyle();
+            const pathData = this.createPathData(path);
+            const bounds = this.calculatePathBounds(pathData);
 
-        const element = {
-            id: `draw-${Date.now()}`,
-            type: isEraser ? 'eraser' : 'drawing', // Tipo diferente para borrador
-            path: pathData,
-            style: style,
-            x: bounds.x,
-            y: bounds.y,
-            width: bounds.width,
-            height: bounds.height,
-            rotation: 0,
-            layer: this.board.currentLayer
-        };
+            const element = {
+                id: `draw-${Date.now()}`,
+                type: isEraser ? 'eraser_path' : 'drawing', // Tipo diferente para borrador
+                path: pathData,
+                style: style,
+                x: bounds.x,
+                y: bounds.y,
+                width: bounds.width,
+                height: bounds.height,
+                rotation: 0,
+                layer: this.board.currentLayer
+            };
 
-        this.board.addDrawingElement(element);
+            console.log('Guardando elemento:', { tipo: element.type, esBorrador: isEraser });
+            this.board.addDrawingElement(element);
 }
 
     finalizeShape(pathData, start, end) {
@@ -3025,9 +3061,11 @@ class DrawingTool {
     }
     
    getDrawingStyle() {
+    // EL BORRADOR NO DEBE DIBUJAR TRAZOS BLANCOS
+    // En su lugar, usaremos un sistema de máscaras
     if (this.activeToolName === 'eraser') {
         return {
-            stroke: '#FFFFFF', // Color blanco para "borrar"
+            stroke: '#000000', // Negro para la máscara
             strokeWidth: this.config.width,
             fill: 'none',
             strokeLinecap: 'round',
@@ -3085,16 +3123,22 @@ class DrawingTool {
     clear() {
         const activeLayer = this.board.getActiveLayer();
         if (activeLayer && activeLayer.elements) {
-            // Vaciar la lista de elementos de la capa (incluyendo borradores)
+            // Vaciar la lista de elementos de la capa
             activeLayer.elements = [];
             
-            // Limpiar el contenedor SVG completamente
+            // Limpiar el contenedor SVG directamente
             const layerIndex = this.board.currentLayer || 0;
             const container = document.getElementById(`g-layer-${layerIndex}`);
             if (container) {
                 container.innerHTML = '';
             }
             
+            // También limpiar las rutas del borrador de la máscara
+            const eraserPaths = document.getElementById(`eraser-paths-${layerIndex}`);
+            if (eraserPaths) {
+                eraserPaths.innerHTML = '';
+            }
+
             this.board.showNotification('Lienzo limpiado');
         }
     }
@@ -3110,15 +3154,14 @@ class DrawingTool {
     clearEraserPaths() {
         const activeLayer = this.board.getActiveLayer();
         if (activeLayer) {
-            // Eliminar elementos de tipo 'eraser' de la capa activa
-            activeLayer.elements = activeLayer.elements.filter(el => el.type !== 'eraser');
+            // Eliminar elementos de tipo 'eraser_path' de la capa activa
+            activeLayer.elements = activeLayer.elements.filter(el => el.type !== 'eraser_path');
 
-            // Limpiar visualmente los trazos de borrador del SVG
+            // Limpiar visualmente los trazos de borrador del SVG (grupo dentro de <defs>)
             const layerIndex = this.board.currentLayer || 0;
-            const drawingGroup = document.getElementById(`g-layer-${layerIndex}`);
-            if (drawingGroup) {
-                const eraserPaths = drawingGroup.querySelectorAll('[data-type="eraser"]');
-                eraserPaths.forEach(path => path.remove());
+            const eraserGroup = document.getElementById(`eraser-paths-${layerIndex}`);
+            if (eraserGroup) {
+                eraserGroup.innerHTML = '';
             }
         }
     }
