@@ -1823,54 +1823,42 @@ input[type="range"]::-moz-range-thumb {
     }
 
     .toolbar.open {
-        max-height: 60vh; /* Altura flexible basada en el viewport */
-        overflow-y: auto;
+        max-height: 70vh; /* Aumentar la altura máxima considerablemente */
+        overflow-y: auto; /* Permitir scroll vertical si es necesario */
     }
 
     .toolbar-content {
         flex-direction: column;
-        align-items: stretch; /* Estirar tarjetas al ancho completo */
-        padding: 15px;
-        gap: 15px; /* Espacio entre tarjetas */
+        align-items: stretch;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    /* Regla agresiva para todos los hijos directos */
+    .toolbar-content > * {
+        width: 100% !important; /* Forzar ancho completo */
+        margin-bottom: 10px; /* Añadir espacio entre elementos */
     }
 
     .tool-option, .image-tool-section, .text-tool-section, .draw-tools, .shape-tools, .draw-actions, .style-buttons, .tool-group {
         flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        width: 100%;
-        padding: 12px;
+        align-items: center; /* Centrar contenido de cada tarjeta */
+        gap: 10px;
+        padding: 15px;
         border: 1px solid #e0e0e0;
         border-radius: 8px;
         background-color: #f9f9f9;
     }
 
-    .tool-option label, .text-tool-section h4, .image-tool-section h4 {
-        font-weight: 600;
-        color: #444;
-    }
-
-    .toolbar-range {
-        width: 90%; /* Slider casi al ancho completo */
-    }
-
-    .toolbar-value {
-        background-color: #e9e9e9;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-size: 13px;
-        font-weight: 500;
+    .toolbar-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+        font-size: 14px;
     }
 
     .toolbar-divider {
         display: none;
-    }
-
-    .toolbar-btn {
-        width: 100%;
-        justify-content: center;
-        padding: 10px;
-        font-size: 14px;
     }
 
     /* Canvas en móviles */
