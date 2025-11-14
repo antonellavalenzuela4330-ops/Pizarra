@@ -3236,6 +3236,14 @@ class DrawingTool {
             }
         }
     }
+
+    updateToolInstance() {
+        if (this.tools[this.activeToolName]) {
+            this.activeToolInstance = this.tools[this.activeToolName];
+        } else if (this.tools[this.activeShapeName]) {
+            this.activeToolInstance = this.tools[this.activeShapeName];
+        }
+    }
 }
 
 // Inicializar la aplicación

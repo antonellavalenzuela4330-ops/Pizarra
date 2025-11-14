@@ -1834,7 +1834,7 @@ input[type="range"]::-moz-range-thumb {
         gap: 15px; /* Espacio entre tarjetas */
     }
 
-    .tool-option, .image-tool-section, .text-tool-section, .draw-tools, .shape-tools, .draw-actions, .style-buttons {
+    .tool-option, .image-tool-section, .text-tool-section, .draw-tools, .shape-tools, .draw-actions, .style-buttons, .tool-group {
         flex-direction: column;
         align-items: center;
         gap: 12px;
