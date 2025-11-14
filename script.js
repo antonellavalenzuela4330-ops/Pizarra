@@ -1568,17 +1568,7 @@ distributeElementsToLayers() {
             path.setAttribute('d', element.path);
             path.setAttribute('data-id', element.id);
             
-            if (element.type === 'eraser_path') {
-                // Estilo específico para borrador en la máscara
-                path.setAttribute('stroke', '#000000'); // Negro para la máscara
-                path.setAttribute('stroke-width', element.style && element.style.strokeWidth ? element.style.strokeWidth : 3);
-                path.setAttribute('fill', 'none');
-                path.setAttribute('stroke-linecap', 'round');
-                path.setAttribute('stroke-linejoin', 'round');
-            } else {
-                // Estilo normal para dibujos
-                this.applyDrawingStyle(path, element.style);
-            }
+            this.applyDrawingStyle(path, element.style);
             
             container.appendChild(path);
         } else {
@@ -2178,6 +2168,11 @@ distributeElementsToLayers() {
         this.deselectElement();
         this.renderLayersPanel();
         this.updateLayerInteractivity();
+
+        // If eraser is active, re-apply its logic to the new active layer
+        if (this.drawingTool.activeToolName === 'eraser') {
+            this.drawingTool.setTool('eraser');
+        }
         
         console.log('Capa activa cambiada:', {
             id: layerId,
@@ -2955,17 +2950,6 @@ class DrawingTool {
         const colorPicker = document.getElementById('draw-color');
         if (colorPicker) {
             colorPicker.disabled = toolName === 'eraser';
-            if (toolName === 'eraser') {
-                this.originalColor = this.config.color;
-                this.config.color = '#FFFFFF'; // Color de borrado
-                this.board.drawingLayer.style.mixBlendMode = 'destination-out';
-            } else {
-                if(this.originalColor){
-                    this.config.color = this.originalColor;
-                    this.originalColor = null; // Limpiar para futuros usos
-                }
-                this.board.drawingLayer.style.mixBlendMode = 'normal';
-            }
         }
         
         this.updateCursor();
@@ -3054,34 +3038,32 @@ class DrawingTool {
     }
     
     createTempSvg() {
-        const canvasContent = document.querySelector('.canvas-content');
-        if (!canvasContent) return;
-        this.tempSvg = document.getElementById('temp-drawing-svg');
-        
-        if (!this.tempSvg) {
-            this.tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            this.tempSvg.id = 'temp-drawing-svg';
-            this.tempSvg.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000;`;
-            canvasContent.appendChild(this.tempSvg);
-        }
-         if (this.activeToolName === 'eraser') {
-            this.tempSvg.style.mixBlendMode = 'destination-out';
-        } else {
-            this.tempSvg.style.mixBlendMode = 'normal';
-        }
-        this.tempSvg.innerHTML = '';
+        // Ya no es necesario crear un SVG temporal. El dibujo se hará en la capa activa.
     }
     
     drawCurrentPath(path) {
-        if (!this.tempSvg || path.length < 2) return;
+        const layerIndex = this.board.currentLayer;
+        const isEraser = this.activeToolName === 'eraser';
+        const containerId = isEraser ? `eraser-paths-${layerIndex}` : `g-layer-${layerIndex}`;
+        const container = document.getElementById(containerId);
+
+        if (!container) return;
+
+        // Eliminar el trazo temporal anterior
+        const oldTempPath = container.querySelector('#temp-path');
+        if (oldTempPath) {
+            oldTempPath.remove();
+        }
+
+        if (path.length < 1) return;
         
-        this.tempSvg.innerHTML = '';
         const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.id = 'temp-path'; // ID para identificarlo y borrarlo
         const pathData = this.createPathData(path);
         
         pathEl.setAttribute('d', pathData);
         this.applyStyleToPath(pathEl);
-        this.tempSvg.appendChild(pathEl);
+        container.appendChild(pathEl);
     }
     
     drawShapePreview(pathData) {
@@ -3113,7 +3095,7 @@ class DrawingTool {
 
             const element = {
                 id: `draw-${Date.now()}`,
-                type: 'drawing', 
+                type: isEraser ? 'eraser_path' : 'drawing', // Tipo diferente para borrador
                 path: pathData,
                 style: style,
                 x: bounds.x,
@@ -3151,6 +3133,17 @@ class DrawingTool {
     }
     
    getDrawingStyle() {
+    if (this.activeToolName === 'eraser') {
+        return {
+            stroke: '#000000', // El borrador SIEMPRE debe ser negro para la máscara
+            strokeWidth: this.config.width,
+            fill: 'none',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            opacity: 1
+        };
+    }
+    
     return {
         stroke: this.config.color,
         strokeWidth: this.config.width,
@@ -3221,9 +3214,10 @@ class DrawingTool {
     }
     
     cleanupAfterDrawing() {
-        if (this.tempSvg) {
-            this.tempSvg.remove();
-            this.tempSvg = null;
+        // Buscar y eliminar el trazo temporal de cualquier capa
+        const tempPath = document.querySelector('#temp-path');
+        if (tempPath) {
+            tempPath.remove();
         }
     }
 
