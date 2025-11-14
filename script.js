@@ -121,6 +121,8 @@ distributeElementsToLayers() {
         this.isDrawing = false;
         this.isDragging = false;
         this.dragStart = { x: 0, y: 0 };
+        this.dragOffsetX = 0;
+        this.dragOffsetY = 0;
         this.resizeHandle = null;
         this.imageMode = null;
         this.textMode = null;
@@ -691,7 +693,7 @@ distributeElementsToLayers() {
                     return {
                         path: element.path,
                         style: element.style || {
-                            stroke: '#000000',
+                            stroke: '#ffffff',
                             strokeWidth: 3,
                             fill: 'none',
                             opacity: 100
@@ -1610,6 +1612,7 @@ distributeElementsToLayers() {
             elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
         } else if (element.type === 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
+            elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
         }
 
         switch(element.type) {
@@ -1781,8 +1784,9 @@ distributeElementsToLayers() {
         const elementDiv = e.target && e.target.closest ? e.target.closest('.canvas-element') : null;
         if (elementDiv) {
             this.selectElement(e, elementDiv);
-            this.dragStart.x = e.clientX;
-            this.dragStart.y = e.clientY;
+            const rect = elementDiv.getBoundingClientRect();
+            this.dragOffsetX = e.clientX - rect.left;
+            this.dragOffsetY = e.clientY - rect.top;
             this.isDragging = true;
         }
     }
@@ -1791,6 +1795,15 @@ distributeElementsToLayers() {
         if (this.selectedTool === 'draw' && this.drawingTool.isDrawing) {
             e.preventDefault();
             this.drawingTool.updateDrawing(e);
+        } else if (this.isDragging && this.selectedElement) {
+            const canvas = document.getElementById('canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const x = e.clientX - canvasRect.left - this.dragOffsetX;
+            const y = e.clientY - canvasRect.top - this.dragOffsetY;
+            
+            const element = this.selectedElement;
+            element.style.left = Math.max(0, Math.min(x, canvasRect.width - element.offsetWidth)) + 'px';
+            element.style.top = Math.max(0, Math.min(y, canvasRect.height - element.offsetHeight)) + 'px';
         }
     }
 
@@ -1803,13 +1816,20 @@ distributeElementsToLayers() {
         }
 
         // Si no se está dibujando, se puede manejar el final de un arrastre de elemento
-        if (this.isDragging) {
+        if (this.isDragging && this.selectedElement) {
+            this.updateElementPosition(this.selectedElement);
             this.isDragging = false;
         }
     }
 
     startDrag(e, element) {
         if (this.selectedTool === 'draw') return;
+
+        const isTextElement = element.getAttribute('data-type') === 'text';
+        if (isTextElement && e.target.classList.contains('text-element')) {
+            return; 
+        }
+
         e.preventDefault();
         this.selectedElement = element;
         const rect = element.getBoundingClientRect();
@@ -2915,7 +2935,7 @@ class DrawingTool {
 
         this.tools = {
     'pen': new PenTool(this),
-    'eraser': new PenTool(this),  // Usa la misma lógica que el lápiz
+    'eraser': new EraserTool(this),
     'line': new LineTool(this),
     'rectangle': new RectangleTool(this),
     'circle': new CircleTool(this)
@@ -2923,40 +2943,41 @@ class DrawingTool {
         this.activeToolInstance = this.tools['pen'];
     }
     
-    setTool(tool) {
-    document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
-    const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
-    if (toolBtn) toolBtn.classList.add('active');
-    
-    document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
-    
-    this.activeToolName = tool;
-    this.activeShapeName = null;
-
-    // CORRECCIÓN: Siempre usar PenTool para herramientas de trazo libre
-    if (tool === 'pen' || tool === 'eraser') {
-        this.activeToolInstance = this.tools['pen'];
-    } else {
-        this.activeToolInstance = this.tools[tool];
-    }
-    
-    if (this.activeToolInstance) {
-        this.board.showNotification(`Herramienta: ${this.getToolName(tool)}`);
-        this.updateCursor();
-    }
-}
-    
-    setShape(shape) {
-        document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('[data-shape]').forEach(btn => btn.classList.remove('active'));
-        const shapeBtn = document.querySelector(`[data-shape="${shape}"]`);
-        if (shapeBtn) shapeBtn.classList.add('active');
+    setTool(toolName) {
+        this.activeToolName = toolName;
         
-        this.activeShapeName = shape;
+        // Actualizar la clase activa en los botones
+        const toolbar = document.querySelector('#toolbar');
+        toolbar.querySelectorAll('.toolbar-btn[data-tool]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tool === toolName);
+        });
+        
+        const colorPicker = document.getElementById('draw-color');
+        if (colorPicker) {
+            colorPicker.disabled = toolName === 'eraser';
+            if (toolName === 'eraser') {
+                this.originalColor = this.config.color;
+                this.config.color = '#FFFFFF'; // Color de borrado
+                this.board.drawingLayer.style.mixBlendMode = 'destination-out';
+            } else {
+                if(this.originalColor){
+                    this.config.color = this.originalColor;
+                    this.originalColor = null; // Limpiar para futuros usos
+                }
+                this.board.drawingLayer.style.mixBlendMode = 'normal';
+            }
+        }
+        
+        this.updateCursor();
+        this.updateToolInstance();
+    }
+    
+    setShape(shapeName) {
+        this.activeShapeName = shapeName;
         this.activeToolName = null;
-        this.activeToolInstance = this.tools[shape];
+        this.activeToolInstance = this.tools[shapeName];
         if (this.activeToolInstance) {
-            this.board.showNotification(`Forma: ${this.getShapeName(shape)}`);
+            this.board.showNotification(`Forma: ${this.getShapeName(shapeName)}`);
             this.updateCursor();
         }
     }
@@ -3043,6 +3064,11 @@ class DrawingTool {
             this.tempSvg.style.cssText = `position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000;`;
             canvasContent.appendChild(this.tempSvg);
         }
+         if (this.activeToolName === 'eraser') {
+            this.tempSvg.style.mixBlendMode = 'destination-out';
+        } else {
+            this.tempSvg.style.mixBlendMode = 'normal';
+        }
         this.tempSvg.innerHTML = '';
     }
     
@@ -3087,7 +3113,7 @@ class DrawingTool {
 
             const element = {
                 id: `draw-${Date.now()}`,
-                type: isEraser ? 'eraser_path' : 'drawing', // Tipo diferente para borrador
+                type: 'drawing', 
                 path: pathData,
                 style: style,
                 x: bounds.x,
@@ -3098,7 +3124,6 @@ class DrawingTool {
                 layer: this.board.currentLayer
             };
 
-            console.log('Guardando elemento:', { tipo: element.type, esBorrador: isEraser });
             this.board.addDrawingElement(element);
 }
 
@@ -3126,19 +3151,6 @@ class DrawingTool {
     }
     
    getDrawingStyle() {
-    // EL BORRADOR NO DEBE DIBUJAR TRAZOS BLANCOS
-    // En su lugar, usaremos un sistema de máscaras
-    if (this.activeToolName === 'eraser') {
-        return {
-            stroke: '#000000', // Negro para la máscara
-            strokeWidth: this.config.width,
-            fill: 'none',
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round',
-            opacity: 1
-        };
-    }
-    
     return {
         stroke: this.config.color,
         strokeWidth: this.config.width,
@@ -3220,7 +3232,7 @@ class DrawingTool {
         const activeLayer = this.board.getActiveLayer();
         if (activeLayer) {
             // Eliminar elementos de tipo 'eraser_path' de la capa activa
-            activeLayer.elements = activeLayer.elements.filter(el => el.type !== 'eraser_path');
+            activeLayer.elements = active.elements.filter(el => el.type !== 'eraser_path');
 
             // Limpiar visualmente los trazos de borrador del SVG (grupo dentro de <defs>)
             const layerIndex = this.board.currentLayer || 0;

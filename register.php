@@ -26,6 +26,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("sss", $nombre_usuario, $email, $contraseña);
     
     if ($stmt->execute()) {
+        $nuevo_usuario_id = $conexion->insert_id;
+
+        // Crear un proyecto inicial para el nuevo usuario
+        $nombre_proyecto_inicial = "Mi Primer Proyecto";
+        $sql_proyecto = "INSERT INTO proyectos (usuario_id, nombre) VALUES (?, ?)";
+        $stmt_proyecto = $conexion->prepare($sql_proyecto);
+        $stmt_proyecto->bind_param("is", $nuevo_usuario_id, $nombre_proyecto_inicial);
+        $stmt_proyecto->execute();
+
         $_SESSION["mensaje"] = "¡Registro exitoso! Ahora puedes iniciar sesión.";
         header("Location: login.php");
         exit;
