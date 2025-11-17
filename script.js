@@ -377,78 +377,39 @@ distributeElementsToLayers() {
             projectNameInput.value = '';
             projectNameInput.placeholder = 'Nombre del proyecto';
         }
-        
-        // Pequeño delay para permitir que el usuario escriba
-        setTimeout(async () => {
-            const projectName = projectNameInput?.value || 'Proyecto sin nombre';
-            
-            try {
-                const response = await fetch('api/create_project.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        nombre: projectName,
-                        descripcion: ''
-                    })
-                });
-                
-                const responseText = await response.text();
+        // Crear un proyecto temporal en cliente (no persistido) para evitar crear "proyectos fantasma"
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+        const projectName = projectNameInput?.value || 'Proyecto sin nombre';
 
-                if (!response.ok) {
-                    throw new Error(`Error del servidor: ${response.status} ${response.statusText}. Respuesta: ${responseText}`);
-                }
-                
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (jsonError) {
-                    throw new Error(`La respuesta del servidor no es un JSON válido.\nRespuesta: ${responseText}`);
-                }
-                
-                if (data.success) {
-                    const newProject = {
-                        id: data.projectId.toString(),
-                        name: projectName,
-                        elements: [],
-                        created: new Date().toISOString(),
-                        modified: new Date().toISOString()
-                    };
-                    
-                    this.projects.push(newProject);
-                    this.currentProject = newProject;
-                    this.updateProjectsList();
-                    this.clearCanvas();
-                    this.history.clear();
-                    
-                    // Añadir el título para un proyecto nuevo y vacío
-                    const canvasContent = document.querySelector('.canvas-content');
-                    if (canvasContent) {
-                        const titleSpan = document.createElement('span');
-                        titleSpan.className = 'canvas-title';
-                        titleSpan.textContent = 'PIZARRA';
-                        canvasContent.appendChild(titleSpan);
-                    }
+        const newProject = {
+            id: tempId,
+            name: projectName,
+            elements: [],
+            created: new Date().toISOString(),
+            modified: new Date().toISOString(),
+            persisted: false // marca local
+        };
 
-                    this.updateProjectName();
-                    this.showNotification('Proyecto creado exitosamente');
-                } else {
-                    this.showNotification('Error al crear proyecto: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error creating project:', error);
-                this.showNotification('Error al crear proyecto');
-            }
-        }, 100);
+        // Añadir proyecto en estado local y abrirlo sin hacer POST al servidor
+        this.projects.unshift(newProject);
+        this.currentProject = newProject;
+        this.updateProjectsList();
+        this.clearCanvas();
+        this.history.clear();
+        this.updateProjectName();
+        this.showNotification('Proyecto creado en local (recuerda guardar para persistir)');
+        // enfocar el input para que el usuario pueda escribir el nombre
+        if (projectNameInput) projectNameInput.focus();
     }
 
     async loadProject(projectId) {
     try {
-        // Guardar proyecto actual antes de cambiar
-        if (this.currentProject) {
+        // Guardar proyecto actual antes de cambiar solo si está persistido en servidor
+        if (this.currentProject && !(String(this.currentProject.id).startsWith('temp-'))) {
             await this.saveCurrentProject();
         }
+        // Limpiar completamente el canvas/DOM antes de cargar el nuevo proyecto
+        this.clearCanvas();
         
         const response = await fetch(`api/get_project.php?id=${projectId}`);
         const data = await response.json();
@@ -536,17 +497,16 @@ distributeElementsToLayers() {
                 const data = await response.json();
                 
                 if (data.success) {
-                    const duplicatedProject = {
-                        id: data.newProjectId.toString(),
-                        name: project.name + ' (Copia)',
-                        elements: [...project.elements],
-                        created: new Date().toISOString(),
-                        modified: new Date().toISOString()
-                    };
-                    
-                    this.projects.push(duplicatedProject);
+                    // Refrescar lista de proyectos desde servidor y abrir la copia
+                    await this.loadProjects();
                     this.updateProjectsList();
-                    this.showNotification('Proyecto duplicado');
+                    // Abrir proyecto duplicado automáticamente (si existe)
+                    if (data.newProjectId) {
+                        await this.loadProject(String(data.newProjectId));
+                        this.showNotification('Proyecto duplicado y abierto');
+                    } else {
+                        this.showNotification('Proyecto duplicado');
+                    }
                 } else {
                     this.showNotification('Error al duplicar proyecto: ' + data.message);
                 }
@@ -567,6 +527,34 @@ distributeElementsToLayers() {
     this.showNotification('Guardando proyecto...');
     
     try {
+        // Si el proyecto es temporal (no persistido), crearlo primero en el servidor
+        if (String(this.currentProject.id).startsWith('temp-')) {
+            const projectNameInput = document.getElementById('project-name');
+            const nombre = projectNameInput ? projectNameInput.value || this.currentProject.name : this.currentProject.name;
+            // POST para crear proyecto y obtener id
+            const createRes = await fetch('api/create_project.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre: nombre, descripcion: '' })
+            });
+            const createText = await createRes.text();
+            let createData;
+            try { createData = JSON.parse(createText); } catch(e){ throw new Error('Respuesta inválida al crear proyecto: '+createText); }
+            if (!createData.success) throw new Error(createData.message || 'No se pudo crear proyecto');
+
+            const realId = String(createData.projectId);
+            // Reemplazar id temporal en la lista de proyectos
+            const idx = this.projects.findIndex(p => p.id === this.currentProject.id);
+            if (idx !== -1) {
+                this.projects[idx].id = realId;
+                this.projects[idx].persisted = true;
+                this.projects[idx].name = nombre;
+            } else {
+                this.projects.unshift({ id: realId, name: nombre, elements: [], created: new Date().toISOString(), modified: new Date().toISOString() });
+            }
+            // Actualizar currentProject id
+            this.currentProject.id = realId;
+        }
         // Actualizar datos del proyecto actual
         this.currentProject.elements = this.getAllCanvasElements();
         this.currentProject.modified = new Date().toISOString();
@@ -2225,26 +2213,38 @@ distributeElementsToLayers() {
 }
 
     clearCanvas() {
-        const activeLayer = this.getActiveLayer();
-        if (activeLayer && activeLayer.elements) {
-            // Vaciar la lista de elementos de la capa
-            activeLayer.elements = [];
-            
-            // Limpiar el contenedor SVG directamente
-            const layerIndex = this.board.currentLayer || 0;
-            const container = document.getElementById(`g-layer-${layerIndex}`);
-            if (container) {
-                container.innerHTML = '';
-            }
-            
-            // También limpiar las rutas del borrador de la máscara
-            const eraserPaths = document.getElementById(`eraser-paths-${layerIndex}`);
-            if (eraserPaths) {
-                eraserPaths.innerHTML = '';
-            }
-
-            this.board.showNotification('Lienzo limpiado');
+        // Limpiar todo el DOM del canvas (elementos HTML y SVG) y resetear capas en memoria
+        const canvas = document.getElementById('canvas');
+        if (canvas) {
+            const canvasContent = canvas.querySelector('.canvas-content');
+            if (canvasContent) canvasContent.innerHTML = '';
         }
+
+        // Limpiar el SVG de dibujo por completo, preservando <defs> si existe
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (drawingLayer) {
+            const defs = drawingLayer.querySelector('defs');
+            drawingLayer.innerHTML = '';
+            if (defs) drawingLayer.appendChild(defs);
+        }
+
+        // Eliminar cualquier grupo o máscara residual
+        document.querySelectorAll('[id^="g-layer-"]').forEach(el => el.remove());
+        document.querySelectorAll('[id^="mask-layer-"]').forEach(el => el.remove());
+
+        // Resetear capas en memoria
+        if (this.board && Array.isArray(this.board.layers)) {
+            this.board.layers.forEach(layer => layer.elements = []);
+        }
+
+        // Restaurar capa inicial si hace falta
+        this.board.layers = this.board.layers && this.board.layers.length ? this.board.layers : [{ id: 'layer-0', name: 'Capa 1', elements: [], visible: true, locked: false }];
+        this.activeLayerId = this.board.layers[0].id;
+        this.currentLayer = 0;
+        this.createLayerDrawingSurface(0);
+
+        // Notificación usando el método correcto
+        this.showNotification('Lienzo limpiado');
     }
 
     addResizeHandles(element) {
@@ -3226,7 +3226,7 @@ class DrawingTool {
         const activeLayer = this.board.getActiveLayer();
         if (activeLayer) {
             // Eliminar elementos de tipo 'eraser_path' de la capa activa
-            activeLayer.elements = active.elements.filter(el => el.type !== 'eraser_path');
+            activeLayer.elements = activeLayer.elements.filter(el => el.type !== 'eraser_path');
 
             // Limpiar visualmente los trazos de borrador del SVG (grupo dentro de <defs>)
             const layerIndex = this.board.currentLayer || 0;
