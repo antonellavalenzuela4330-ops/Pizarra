@@ -1615,12 +1615,22 @@ distributeElementsToLayers() {
         // Asignar z-index basado en la capa. Inicia en 60 para estar sobre el canvas de dibujo (z-index: 50)
         elementDiv.style.zIndex = 60 + (element.layer || 0) * 10;
 
-        if (element.type !== 'text') {
+        if (element.type === 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
             elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
-        } else if (element.type === 'text') {
+            elementDiv.addEventListener('touchstart', (e) => this.selectElement(e, elementDiv));
+            elementDiv.addEventListener('touchstart', (e) => this.startDrag(e, elementDiv));
+        } else if (element.type === 'image') {
+            elementDiv.classList.add('image-element');
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
             elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
+            elementDiv.addEventListener('touchstart', (e) => this.selectElement(e, elementDiv));
+            elementDiv.addEventListener('touchstart', (e) => this.startDrag(e, elementDiv));
+        } else if (element.type === 'pdf') {
+            elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
+            elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
+            elementDiv.addEventListener('touchstart', (e) => this.selectElement(e, elementDiv));
+            elementDiv.addEventListener('touchstart', (e) => this.startDrag(e, elementDiv));
         }
 
         switch(element.type) {
@@ -1874,14 +1884,20 @@ distributeElementsToLayers() {
         e.preventDefault();
         this.selectedElement = element;
         const rect = element.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
+        
+        const isTouchEvent = e.type.startsWith('touch');
+        const startX = isTouchEvent ? e.touches[0].clientX : e.clientX;
+        const startY = isTouchEvent ? e.touches[0].clientY : e.clientY;
+        const offsetX = startX - rect.left;
+        const offsetY = startY - rect.top;
 
-        const handleMouseMove = (e) => {
+        const handleMouseMove = (moveEvent) => {
+            const moveX = isTouchEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const moveY = isTouchEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
             const canvas = document.getElementById('canvas');
             const canvasRect = canvas.getBoundingClientRect();
-            const x = e.clientX - canvasRect.left - offsetX;
-            const y = e.clientY - canvasRect.top - offsetY;
+            const x = moveX - canvasRect.left - offsetX;
+            const y = moveY - canvasRect.top - offsetY;
             
             element.style.left = Math.max(0, Math.min(x, canvasRect.width - element.offsetWidth)) + 'px';
             element.style.top = Math.max(0, Math.min(y, canvasRect.height - element.offsetHeight)) + 'px';
@@ -1890,11 +1906,13 @@ distributeElementsToLayers() {
         const handleMouseUp = () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
             this.updateElementPosition(element);
         };
 
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener(isTouchEvent ? 'touchmove' : 'mousemove', handleMouseMove);
+        document.addEventListener(isTouchEvent ? 'touchend' : 'mouseup', handleMouseUp);
     }
 
     selectElement(e, element) {
@@ -2358,6 +2376,7 @@ distributeElementsToLayers() {
             element.appendChild(handle);
 
             handle.addEventListener('mousedown', (e) => this.startResize(e, element, pos));
+            handle.addEventListener('touchstart', (e) => this.startResize(e, element, pos));
         }
     }
 
@@ -2369,16 +2388,19 @@ distributeElementsToLayers() {
         const canvas = document.getElementById('canvas');
         const canvasRect = canvas.getBoundingClientRect();
 
-        const initialMouseX = e.clientX;
-        const initialMouseY = e.clientY;
+        const isTouchEvent = e.type.startsWith('touch');
+        const initialMouseX = isTouchEvent ? e.touches[0].clientX : e.clientX;
+        const initialMouseY = isTouchEvent ? e.touches[0].clientY : e.clientY;
         const initialWidth = rect.width;
         const initialHeight = rect.height;
         const initialLeft = rect.left - canvasRect.left;
         const initialTop = rect.top - canvasRect.top;
 
         const doResize = (moveEvent) => {
-            const dx = moveEvent.clientX - initialMouseX;
-            const dy = moveEvent.clientY - initialMouseY;
+            const moveX = isTouchEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+            const moveY = isTouchEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+            const dx = moveX - initialMouseX;
+            const dy = moveY - initialMouseY;
 
             let newWidth = initialWidth;
             let newHeight = initialHeight;
@@ -2424,15 +2446,17 @@ distributeElementsToLayers() {
         const stopResize = () => {
             document.removeEventListener('mousemove', doResize);
             document.removeEventListener('mouseup', stopResize);
+            document.removeEventListener('touchmove', doResize);
+            document.removeEventListener('touchend', stopResize);
             document.body.style.cursor = 'default';
 
             const elementId = element.id.replace('element-', '');
-            this.updateElementSize(elementId, element.style.width, element.style.height);
+            this.updateElementSize(elementId, element.style.width, element.style.height, element.style.left, element.style.top);
         };
 
-        document.addEventListener('mousemove', doResize);
-        document.addEventListener('mouseup', stopResize);
-        document.body.style.cursor = e.target.dataset.cursor;
+        document.addEventListener(isTouchEvent ? 'touchmove' : 'mousemove', doResize);
+        document.addEventListener(isTouchEvent ? 'touchend' : 'mouseup', stopResize);
+        document.body.style.cursor = `${handlePos}-resize`;
     }
 
     updateElementPosition(element) {
