@@ -2001,21 +2001,53 @@ distributeElementsToLayers() {
         const header = document.createElement('div');
         header.className = 'layer-header';
 
-        // Hacer el nombre editable
+        // Hacer el nombre editable con un solo clic (modo lectura por defecto)
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
         nameInput.className = 'layer-name-input';
         nameInput.value = layer.name;
-        nameInput.addEventListener('change', (e) => {
-            this.renameLayer(layer.id, e.target.value);
+        nameInput.readOnly = true; // evitar edición accidental
+
+        // Guardar nombre original para poder cancelar con Escape
+        let originalName = layer.name;
+
+        // Un solo clic entra en modo edición: detener propagación para
+        // que no seleccione la capa, enfocar y seleccionar todo el texto
+        nameInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nameInput.readOnly = false;
+            nameInput.focus();
+            nameInput.select();
         });
-        nameInput.addEventListener('blur', (e) => {
-            this.renameLayer(layer.id, e.target.value);
+
+        // Evitar que mousedown en el input active la selección del contenedor
+        nameInput.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
         });
-        nameInput.addEventListener('keypress', (e) => {
+
+        // Teclas: Enter confirma (blur), Escape cancela (restaura)
+        nameInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.target.blur();
+                e.preventDefault();
+                nameInput.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                nameInput.value = originalName;
+                nameInput.blur();
             }
+        });
+
+        // Al perder foco: guardar si cambió, restaurar modo lectura
+        nameInput.addEventListener('blur', (e) => {
+            const newName = e.target.value.trim() || originalName;
+            if (newName !== originalName) {
+                this.renameLayer(layer.id, newName);
+                originalName = newName;
+            } else {
+                // Si no cambió (o se canceló), asegurar valor original
+                e.target.value = originalName;
+            }
+            nameInput.readOnly = true;
         });
 
         header.appendChild(nameInput);
