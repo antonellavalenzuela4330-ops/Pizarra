@@ -438,23 +438,29 @@ distributeElementsToLayers() {
         const data = await response.json();
         
         if (data.success) {
-            const project = {
-                id: data.project.id.toString(),
-                name: data.project.nombre,
-                elements: data.elements || [],
-                created: data.project.fecha_creacion,
-                modified: data.project.ultima_modificacion
-            };
+            this.currentProject = data.project;
+            this.board = data.board || this.board;
+
+            // FIX: Pre-crear todas las superficies de las capas en el orden correcto
+            // para asegurar que el z-index (orden en el SVG) sea el correcto.
+            if (this.board.layers && this.board.layers.length > 0) {
+                this.board.layers.forEach((layer, index) => {
+                    this.createLayerDrawingSurface(index);
+                });
+            }
+
+            this.renderLayersPanel(); // Actualizar panel de capas
             
-            this.currentProject = project;
+            // Cargar elementos después de que las capas base estén listas
+            if (this.board.layers && this.board.layers.length > 0) {
+                this.loadCanvasElements(this.board.layers.flatMap(layer => layer.elements));
+            }
+
+            this.updateAllElementZIndexes(); // Asegurar que todos los z-index son correctos
             
-            // Reiniciar sistema de capas para el nuevo proyecto
-            this.initializeLayersForProject();
-            
-            this.loadCanvasElements(project.elements);
             this.updateProjectName();
             this.closeSidebar();
-            this.showNotification('Proyecto cargado');
+            this.showNotification(`Proyecto "${this.currentProject.nombre}" cargado`);
         } else {
             this.showNotification('Error al cargar proyecto: ' + data.message);
         }
@@ -1606,7 +1612,8 @@ distributeElementsToLayers() {
         if (element.type !== 'image') {
             elementDiv.style.opacity = (element.opacity || 100) / 100;
         }
-    elementDiv.style.zIndex = 100 + (element.layer * 10) || 100;
+        // Asignar z-index basado en la capa. Inicia en 60 para estar sobre el canvas de dibujo (z-index: 50)
+        elementDiv.style.zIndex = 60 + (element.layer || 0) * 10;
 
         if (element.type !== 'text') {
             elementDiv.addEventListener('mousedown', (e) => this.selectElement(e, elementDiv));
@@ -1752,8 +1759,39 @@ distributeElementsToLayers() {
         elementDiv.style.width = element.width + 'px';
         elementDiv.style.height = element.height + 'px';
         elementDiv.style.transform = `rotate(${element.rotation || 0}deg)`;
-        elementDiv.style.opacity = (element.opacity || 100) / 100;
-        elementDiv.style.zIndex = element.layer || 0;
+        elementDiv.style.zIndex = 60 + (element.layer || 0) * 10;
+
+        if (element.type === 'image') {
+            // La opacidad de la imagen se controla en el div contenedor
+            elementDiv.style.opacity = (element.opacity || 100) / 100;
+        } else if (element.type === 'text') {
+            const textarea = elementDiv.querySelector('textarea');
+            if (textarea) {
+                textarea.value = element.content;
+                Object.assign(textarea.style, element.styles);
+            }
+        } else if (element.type === 'document') {
+             // Lógica de actualización para documentos si es necesaria
+        }
+        
+        // Opacidad para todos los elementos (excepto imagen que ya se manejó)
+        if (element.type !== 'image') {
+            elementDiv.style.opacity = (element.opacity || 100) / 100;
+        }
+    }
+
+    updateAllElementZIndexes() {
+        this.board.layers.forEach((layer, index) => { // Añadido 'index'
+            layer.elements.forEach(element => {
+                if (element.type !== 'drawing' && element.type !== 'eraser_path') {
+                    const elementDiv = document.getElementById(`element-${element.id}`);
+                    if (elementDiv) {
+                        // Usar el índice del bucle de capas para el cálculo
+                        elementDiv.style.zIndex = 60 + index * 10;
+                    }
+                }
+            });
+        });
     }
 
     // ===== INTERACCIÓN CON EL CANVAS =====
@@ -2213,6 +2251,7 @@ distributeElementsToLayers() {
         this.deselectElement();
         this.renderLayersPanel();
         this.updateLayerInteractivity();
+        this.reorderDrawingLayers(); // Reordenar al cambiar de capa
 
         // If eraser is active, re-apply its logic to the new active layer
         if (this.drawingTool.activeToolName === 'eraser') {
@@ -2814,6 +2853,39 @@ distributeElementsToLayers() {
             layer.locked = isLocked;
             this.renderLayersPanel();
         }
+    }
+
+    changeElementLayer(elementId, newLayerIndex) {
+        const element = this.findElementById(elementId);
+        if (element) {
+            const currentLayerIndex = this.board.layers.findIndex(layer => layer.elements.some(el => el.id === elementId));
+            if (currentLayerIndex !== -1) {
+                this.board.layers[currentLayerIndex].elements = this.board.layers[currentLayerIndex].elements.filter(el => el.id !== elementId);
+                this.board.layers[newLayerIndex].elements.push(element);
+                this.renderElement(element);
+                this.updateAllElementZIndexes();
+            }
+        }
+    }
+
+    reorderDrawingLayers() {
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (!drawingLayer) return;
+
+        // Desacoplar todos los grupos de capas existentes
+        const groups = [];
+        this.board.layers.forEach((layer, index) => {
+            const group = document.getElementById(`g-layer-${index}`);
+            if (group) {
+                groups.push(group);
+                group.remove();
+            }
+        });
+
+        // Volver a acoplar los grupos en el orden correcto
+        groups.forEach(group => {
+            drawingLayer.appendChild(group);
+        });
     }
 }
 
