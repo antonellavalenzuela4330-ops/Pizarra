@@ -14,7 +14,7 @@ if (!isset($_SESSION['usuario_id'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="img/boardly.png" type="image/png">
+    <link rel="icon" type="image/png" href="img/logo2.png">
 </head>
 <body>
     <!-- Menú lateral -->

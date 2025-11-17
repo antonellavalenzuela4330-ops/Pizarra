@@ -38,10 +38,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html>
 <head>
-
     <title>Iniciar Sesión</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="auth.css">
+    <link rel="icon" type="image/png" href="img/logo2.png">
 </head>
 <body>
     <div class="auth-container">

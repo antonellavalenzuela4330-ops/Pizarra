@@ -39,6 +39,7 @@ unset($_SESSION['mensaje']);
     <title>Registro</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="auth.css">
+    <link rel="icon" type="image/png" href="img/logo2.png">
 </head>
 <body>
     <div class="auth-container">
