@@ -2872,17 +2872,17 @@ distributeElementsToLayers() {
         const drawingLayer = document.getElementById('drawing-layer');
         if (!drawingLayer) return;
 
-        // Desacoplar todos los grupos de capas existentes
-        const groups = [];
-        this.board.layers.forEach((layer, index) => {
-            const group = document.getElementById(`g-layer-${index}`);
-            if (group) {
-                groups.push(group);
-                group.remove();
-            }
+        // Obtener todos los grupos de capas directamente del DOM
+        const groups = Array.from(drawingLayer.querySelectorAll('[id^="g-layer-"]'));
+
+        // Ordenarlos numéricamente por el índice en su ID
+        groups.sort((a, b) => {
+            const indexA = parseInt(a.id.replace('g-layer-', ''), 10);
+            const indexB = parseInt(b.id.replace('g-layer-', ''), 10);
+            return indexA - indexB;
         });
 
-        // Volver a acoplar los grupos en el orden correcto
+        // Volver a acoplar los grupos en el orden correcto para asegurar el apilamiento visual
         groups.forEach(group => {
             drawingLayer.appendChild(group);
         });
@@ -3186,22 +3186,32 @@ class DrawingTool {
     }
     
     createTempSvg() {
-        let drawingLayer = document.getElementById('drawing-layer');
-        if (!drawingLayer) return;
+        const layerIndex = this.board.currentLayer;
+        let layerGroup = document.getElementById(`g-layer-${layerIndex}`);
+
+        if (!layerGroup) {
+            layerGroup = document.getElementById('drawing-layer');
+        }
+        if (!layerGroup) return;
+
+        const existingTempGroup = document.getElementById('temp-drawing-group');
+        if (existingTempGroup) {
+            existingTempGroup.remove();
+        }
 
         this.tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.tempSvg.id = 'temp-drawing-group';
-        
+
         const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
         tempPath.setAttribute("id", "temp-path");
-        
+
         const style = this.getDrawingStyle();
         Object.entries(style).forEach(([key, value]) => {
             tempPath.setAttribute(this.camelToKebab(key), value);
         });
 
         this.tempSvg.appendChild(tempPath);
-        drawingLayer.appendChild(this.tempSvg);
+        layerGroup.appendChild(this.tempSvg);
     }
     
     drawCurrentPath(path) {
@@ -3356,12 +3366,15 @@ class DrawingTool {
     }
     
     cleanupAfterDrawing() {
-        // Buscar y eliminar el trazo temporal de cualquier capa
-        const tempPath = document.querySelector('#temp-path');
-        if (tempPath) {
-            tempPath.remove();
+        if (this.tempSvg) {
+            this.tempSvg.remove();
+            this.tempSvg = null;
+        } else {
+            const tempGroup = document.getElementById('temp-drawing-group');
+            if (tempGroup) {
+                tempGroup.remove();
+            }
         }
-        this.tempSvg = null;
     }
 
     // Eliminar solo los trazos de borrador de la capa activa
