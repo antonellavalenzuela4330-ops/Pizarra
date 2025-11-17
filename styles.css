@@ -702,10 +702,9 @@ header {
 .toolbar.open {
     max-height: 70px;
     opacity: 1;
-    overflow: hidden; /* Cambiado para controlar el desbordamiento */
-    padding: 0 20px;
-    height: 70px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra sutil para la separación */
+    overflow: visible; /* Permitir que el contenido se muestre */
+    padding: 10px 20px; /* Añadir padding vertical para dar espacio */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .toolbar-content {
@@ -1742,9 +1741,78 @@ input[type="range"]::-moz-range-thumb {
 /* Móviles y pantallas pequeñas */
 @media (max-width: 768px) {
     .header-content {
-        padding: 8px 10px;
-        flex-wrap: nowrap; /* Evitar el salto de línea del header */
-        justify-content: space-between;
+        padding: 5px 10px; /* Reducir padding del header */
+    }
+
+    .header-btn, .tool-btn {
+        width: 38px; /* Tamaño de botón consistente */
+        height: 38px;
+        font-size: 16px;
+    }
+
+    .toolbar {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* Sombra más pronunciada */
+    }
+
+    .toolbar.open {
+        max-height: 80px; /* Un poco más de altura para la barra */
+    }
+
+    .toolbar-content {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Alinear al inicio para que el scroll funcione bien */
+        padding: 10px;
+        gap: 15px; /* Aumentar espacio entre grupos de herramientas */
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .toolbar-content > * {
+        flex-shrink: 0; /* Evitar que los elementos se encojan */
+    }
+
+    .tool-option, .image-tool-section, .text-tool-section, .draw-tools, .shape-tools, .draw-actions, .style-buttons, .tool-group {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center; 
+        gap: 8px;
+        padding: 0;
+        border: none;
+        background-color: transparent;
+    }
+
+    .toolbar-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+        white-space: nowrap; /* Evitar que el texto del botón se rompa */
+    }
+
+    .tool-option label {
+        white-space: nowrap;
+    }
+
+    /* Ajustes específicos para los botones de texto */
+    .tool-option .text-style-btn, .tool-option .text-align-btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+    }
+
+    .toolbar-range {
+        width: 70px; /* Sliders más cortos */
+    }
+
+    .toolbar-select, .toolbar-color {
+        min-width: 60px; /* Ancho mínimo para selects */
+        padding: 6px;
+        font-size: 12px;
+    }
+
+    .toolbar-divider {
+        height: 25px;
+        margin: 0 5px;
     }
 
     .header-left, .header-right {
@@ -1828,33 +1896,37 @@ input[type="range"]::-moz-range-thumb {
     }
 
     .toolbar-content {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row; /* Cambiar a fila */
+        align-items: center; /* Centrar verticalmente */
         padding: 10px;
         gap: 10px;
+        overflow-x: auto; /* Permitir scroll horizontal */
+        flex-wrap: nowrap; /* Evitar que salten de línea */
     }
 
     /* Regla agresiva para todos los hijos directos */
     .toolbar-content > * {
-        width: 100% !important; /* Forzar ancho completo */
-        margin-bottom: 10px; /* Añadir espacio entre elementos */
+        width: auto !important; /* Ancho automático */
+        margin-bottom: 0; /* Sin margen inferior */
+        flex-shrink: 0; /* Evitar que los botones se encojan */
     }
 
     .tool-option, .image-tool-section, .text-tool-section, .draw-tools, .shape-tools, .draw-actions, .style-buttons, .tool-group {
-        flex-direction: column;
-        align-items: center; /* Centrar contenido de cada tarjeta */
-        gap: 10px;
-        padding: 15px;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        background-color: #f9f9f9;
+        flex-direction: row; /* Poner los controles en fila */
+        flex-wrap: wrap; /* Permitir que se envuelvan si es necesario */
+        align-items: center; 
+        justify-content: center;
+        gap: 8px;
+        padding: 8px;
+        border: none;
+        background-color: transparent;
     }
 
     .toolbar-btn {
-        width: 100%;
+        width: auto; /* Ancho automático */
         justify-content: center;
-        padding: 12px;
-        font-size: 14px;
+        padding: 8px 10px; /* Reducir padding */
+        font-size: 12px; /* Reducir tamaño de fuente */
     }
 
     .toolbar-divider {

@@ -237,14 +237,16 @@ distributeElementsToLayers() {
         if (!e) return;
         if (e.touches && e.touches.length === 1) {
             const touch = e.touches[0];
-            const mouseEvent = new MouseEvent('mousedown', {
+            // Crear un objeto de evento sintético que imita un MouseEvent
+            const syntheticEvent = {
                 clientX: touch.clientX,
                 clientY: touch.clientY,
-                bubbles: true,
-                cancelable: true
-            });
-            // Disparar como si fuera un mousedown
-            this.handleMouseDown(mouseEvent);
+                target: touch.target,
+                button: 0, // Simular clic izquierdo
+                preventDefault: () => e.preventDefault(),
+                stopPropagation: () => e.stopPropagation()
+            };
+            this.handleMouseDown(syntheticEvent);
         }
         e.preventDefault();
     }
@@ -253,20 +255,27 @@ distributeElementsToLayers() {
         if (!e) return;
         if (e.touches && e.touches.length === 1) {
             const touch = e.touches[0];
-            const mouseEvent = new MouseEvent('mousemove', {
+            const syntheticEvent = {
                 clientX: touch.clientX,
                 clientY: touch.clientY,
-                bubbles: true,
-                cancelable: true
-            });
-            this.handleMouseMove(mouseEvent);
+                target: touch.target,
+                preventDefault: () => e.preventDefault(),
+                stopPropagation: () => e.stopPropagation()
+            };
+            this.handleMouseMove(syntheticEvent);
         }
         e.preventDefault();
     }
 
     handleTouchEnd(e) {
-        const mouseEvent = new MouseEvent('mouseup', { bubbles: true, cancelable: true });
-        this.handleMouseUp(mouseEvent);
+        // Crear un evento sintético para mouseup también
+        const syntheticEvent = {
+            target: e.target,
+            button: 0,
+            preventDefault: () => e.preventDefault(),
+            stopPropagation: () => e.stopPropagation()
+        };
+        this.handleMouseUp(syntheticEvent);
     }
 
     // Añade este método para mejorar la experiencia del input
@@ -300,10 +309,24 @@ distributeElementsToLayers() {
     }
 
     createLayerDrawingSurface(layerIndex) {
-        const drawingLayer = document.getElementById('drawing-layer');
+        let drawingLayer = document.getElementById('drawing-layer');
         if (!drawingLayer) {
-            console.error('Error crítico: El SVG principal "drawing-layer" no se encontró en el DOM.');
-            return;
+            console.warn('El SVG principal "drawing-layer" no se encontró. Creándolo dinámicamente.');
+            const canvas = document.getElementById('canvas');
+            if (canvas) {
+                drawingLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                drawingLayer.id = 'drawing-layer';
+                drawingLayer.style.position = 'absolute';
+                drawingLayer.style.top = '0';
+                drawingLayer.style.left = '0';
+                drawingLayer.style.width = '100%';
+                drawingLayer.style.height = '100%';
+                drawingLayer.style.pointerEvents = 'none';
+                canvas.appendChild(drawingLayer);
+            } else {
+                console.error('Error crítico: No se encontró el contenedor principal del canvas para crear el SVG de dibujo.');
+                return;
+            }
         }
 
         // Asegurar que exista el contenedor de definiciones <defs>
@@ -1601,6 +1624,8 @@ distributeElementsToLayers() {
                         <button class="image-control-btn" onclick="event.stopPropagation(); app.deleteElement('${element.id}')" title="Eliminar">×</button>
                     </div>
                 `;
+                // Añadir listeners de drag a la imagen explícitamente si es necesario
+                elementDiv.addEventListener('mousedown', (e) => this.startDrag(e, elementDiv));
                 break;
             case 'text':
                 elementDiv.innerHTML = `
@@ -2839,6 +2864,7 @@ class PenTool extends BaseDrawingTool {
 
     onMouseUp(e) {
         if (!this.isDrawing) {
+            this.drawingTool.cleanupAfterDrawing(); // Limpiar si solo fue un clic
             return;
         }
         super.onMouseUp(e);
@@ -2872,11 +2898,12 @@ class EraserTool extends BaseDrawingTool {
 
     onMouseUp(e) {
         if (!this.isDrawing) {
+            this.drawingTool.cleanupAfterDrawing(); // Limpiar si solo fue un clic
             return;
         }
         super.onMouseUp(e);
         if (this.path.length > 1) {
-            this.drawingTool.finalizePath(this.path);
+            this.drawingTool.finalizePath(this.path, true); // true indica que es un borrador
         }
         this.drawingTool.cleanupAfterDrawing();
         this.path = [];
@@ -2982,6 +3009,22 @@ class DrawingTool {
         const colorPicker = document.getElementById('draw-color');
         if (colorPicker) {
             colorPicker.disabled = toolName === 'eraser';
+            const drawingLayer = document.getElementById('drawing-layer');
+            if (drawingLayer) {
+                if (toolName === 'eraser') {
+                    // Guardar el color original y poner el del borrador
+                    this.originalColor = this.config.color;
+                    this.config.color = '#FFFFFF';
+                    drawingLayer.style.mixBlendMode = 'destination-out';
+                } else {
+                    // Restaurar el color original
+                    if (this.originalColor) {
+                        this.config.color = this.originalColor;
+                        this.originalColor = null;
+                    }
+                    drawingLayer.style.mixBlendMode = 'normal';
+                }
+            }
         }
         
         this.updateCursor();
@@ -2996,6 +3039,7 @@ class DrawingTool {
             this.board.showNotification(`Forma: ${this.getShapeName(shapeName)}`);
             this.updateCursor();
         }
+        this.updateToolInstance();
     }
     
     getToolName(tool) {
@@ -3007,15 +3051,15 @@ class DrawingTool {
     }
     
     updateCursor() {
-    const canvas = document.getElementById('canvas');
-    if (this.activeToolName === 'eraser') {
-        // Crear un cursor circular para el borrador
-        const size = Math.max(10, this.config.width * 2);
-        canvas.style.cursor = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="none" stroke="red" stroke-width="1"/></svg>') ${size/2} ${size/2}, auto`;
-    } else {
-        canvas.style.cursor = 'crosshair';
+        const canvas = document.getElementById('canvas');
+        if (this.activeToolName === 'eraser') {
+            const size = this.config.width * this.board.zoom;
+            const cursorSVG = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="white" /></svg>`;
+            canvas.style.cursor = `url('data:image/svg+xml;base64,${btoa(cursorSVG)}') ${size/2} ${size/2}, auto`;
+        } else {
+            canvas.style.cursor = 'crosshair';
+        }
     }
-}
     
     setupEvents() {
     const widthSlider = document.getElementById('draw-width');
@@ -3070,43 +3114,38 @@ class DrawingTool {
     }
     
     createTempSvg() {
-        // Ya no es necesario crear un SVG temporal. El dibujo se hará en la capa activa.
+        let drawingLayer = document.getElementById('drawing-layer');
+        if (!drawingLayer) return;
+
+        this.tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.tempSvg.id = 'temp-drawing-group';
+        
+        const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        tempPath.setAttribute("id", "temp-path");
+        
+        const style = this.getDrawingStyle();
+        Object.entries(style).forEach(([key, value]) => {
+            tempPath.setAttribute(this.camelToKebab(key), value);
+        });
+
+        this.tempSvg.appendChild(tempPath);
+        drawingLayer.appendChild(this.tempSvg);
     }
     
     drawCurrentPath(path) {
-        const layerIndex = this.board.currentLayer;
-        const isEraser = this.activeToolName === 'eraser';
-        const containerId = isEraser ? `eraser-paths-${layerIndex}` : `g-layer-${layerIndex}`;
-        const container = document.getElementById(containerId);
-
-        if (!container) return;
-
-        // Eliminar el trazo temporal anterior
-        const oldTempPath = container.querySelector('#temp-path');
-        if (oldTempPath) {
-            oldTempPath.remove();
+        if (!this.tempSvg) return;
+        const tempPath = this.tempSvg.querySelector('#temp-path');
+        if (tempPath && path.length > 0) {
+            tempPath.setAttribute("d", this.createPathData(path));
         }
-
-        if (path.length < 1) return;
-        
-        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        pathEl.id = 'temp-path'; // ID para identificarlo y borrarlo
-        const pathData = this.createPathData(path);
-        
-        pathEl.setAttribute('d', pathData);
-        this.applyStyleToPath(pathEl);
-        container.appendChild(pathEl);
     }
     
     drawShapePreview(pathData) {
         if (!this.tempSvg) return;
-        this.tempSvg.innerHTML = '';
-        if (!pathData) return;
-        
-        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        pathEl.setAttribute('d', pathData);
-        this.applyStyleToPath(pathEl);
-        this.tempSvg.appendChild(pathEl);
+        const tempPath = this.tempSvg.querySelector('#temp-path');
+        if (tempPath) {
+            tempPath.setAttribute('d', pathData);
+        }
     }
     
     applyStyleToPath(path) {
@@ -3117,29 +3156,28 @@ class DrawingTool {
         });
     }
 
-    finalizePath(path) {
-            if (path.length < 2) return;
+    finalizePath(path, isEraser = false) {
+        if (path.length < 2) return;
 
-            const isEraser = this.activeToolName === 'eraser';
-            const style = this.getDrawingStyle();
-            const pathData = this.createPathData(path);
-            const bounds = this.calculatePathBounds(pathData);
+        const style = this.getDrawingStyle();
+        const pathData = this.createPathData(path);
+        const bounds = this.calculatePathBounds(path);
 
-            const element = {
-                id: `draw-${Date.now()}`,
-                type: isEraser ? 'eraser_path' : 'drawing', // Tipo diferente para borrador
-                path: pathData,
-                style: style,
-                x: bounds.x,
-                y: bounds.y,
-                width: bounds.width,
-                height: bounds.height,
-                rotation: 0,
-                layer: this.board.currentLayer
-            };
+        const element = {
+            id: `draw-${Date.now()}`,
+            type: 'drawing', // Los trazos del borrador también son de tipo 'drawing'
+            path: pathData,
+            style: style,
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+            rotation: 0,
+            layer: this.board.currentLayer
+        };
 
-            this.board.addDrawingElement(element);
-}
+        this.board.addDrawingElement(element);
+    }
 
     finalizeShape(pathData, start, end) {
         const style = this.getDrawingStyle();
@@ -3165,17 +3203,6 @@ class DrawingTool {
     }
     
    getDrawingStyle() {
-    if (this.activeToolName === 'eraser') {
-        return {
-            stroke: '#000000', // El borrador SIEMPRE debe ser negro para la máscara
-            strokeWidth: this.config.width,
-            fill: 'none',
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round',
-            opacity: 1
-        };
-    }
-    
     return {
         stroke: this.config.color,
         strokeWidth: this.config.width,
@@ -3186,20 +3213,26 @@ class DrawingTool {
     };
 }
     
-    calculatePathBounds(pathData) {
-        if (!pathData) return { x: 0, y: 0, width: 0, height: 0 };
-        const points = (pathData.match(/[\d\.]+/g) || []).map(Number);
-        if (points.length < 2) return { x: 0, y: 0, width: 0, height: 0 };
+    calculatePathBounds(points) {
+        if (!points || points.length === 0) {
+            return { x: 0, y: 0, width: 0, height: 0 };
+        }
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (let i = 0; i < points.length; i += 2) {
-            minX = Math.min(minX, points[i]);
-            maxX = Math.max(maxX, points[i]);
-            minY = Math.min(minY, points[i + 1]);
-            maxY = Math.max(maxY, points[i + 1]);
-        }
-        const margin = this.config.width;
-        return { x: minX - margin, y: minY - margin, width: maxX - minX + margin * 2, height: maxY - minY + margin * 2 };
+
+        points.forEach(p => {
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+        });
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
     }
     
     calculateShapeBounds(start, end, shape) {
@@ -3212,13 +3245,18 @@ class DrawingTool {
     }
     
     getCanvasCoordinates(e) {
-        const canvas = document.getElementById('canvas');
-        const rect = canvas.getBoundingClientRect();
-        // Incorporar pan y zoom para coordenadas precisas
-        const pan = this.board.board.pan;
-        const zoom = this.board.board.zoom;
+        const drawingLayer = document.getElementById('drawing-layer');
+        if (!drawingLayer) return { x: 0, y: 0 };
+
+        const rect = drawingLayer.getBoundingClientRect();
+        
+        // Acceder correctamente a pan y zoom desde el objeto 'board' de PizarraApp
+        const pan = this.board.pan || { x: 0, y: 0 };
+        const zoom = this.board.zoom || 1;
+
         const x = (e.clientX - rect.left - pan.x) / zoom;
         const y = (e.clientY - rect.top - pan.y) / zoom;
+        
         return { x, y };
     }
     
@@ -3251,6 +3289,7 @@ class DrawingTool {
         if (tempPath) {
             tempPath.remove();
         }
+        this.tempSvg = null;
     }
 
     // Eliminar solo los trazos de borrador de la capa activa
@@ -3276,8 +3315,28 @@ class DrawingTool {
             this.activeToolInstance = this.tools[this.activeShapeName];
         }
     }
+
+    camelToKebab(str) {
+        return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+    }
 }
 
-// Inicializar la aplicación
-const app = new PizarraApp();
-window.app = app;
+// Esperar a que el DOM esté completamente cargado para inicializar la aplicación
+document.addEventListener('DOMContentLoaded', () => {
+    // Asegurarse de que el SVG de dibujo exista antes de inicializar
+    const canvas = document.getElementById('canvas');
+    if (canvas && !document.getElementById('drawing-layer')) {
+        const drawingLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        drawingLayer.id = 'drawing-layer';
+        drawingLayer.style.position = 'absolute';
+        drawingLayer.style.top = '0';
+        drawingLayer.style.left = '0';
+        drawingLayer.style.width = '100%';
+        drawingLayer.style.height = '100%';
+        drawingLayer.style.pointerEvents = 'none';
+        canvas.appendChild(drawingLayer);
+    }
+    
+    // Inicializar la aplicación
+    window.app = new PizarraApp();
+});
