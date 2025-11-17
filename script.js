@@ -2213,10 +2213,10 @@ distributeElementsToLayers() {
         const canvasContent = canvas.querySelector('.canvas-content');
         
         elements.forEach(element => {
-            if (element.type === 'drawing' || element.type === 'eraser_path') {
+            if (element && (element.type === 'drawing' || element.type === 'eraser_path')) {
                 // Renderizar tanto dibujos normales como trazos de borrador
                 this.renderDrawingElement(element);
-            } else {
+            } else if (element) {
                 const elementDiv = this.createElementDiv(element);
                 if (elementDiv) canvasContent.appendChild(elementDiv);
             }
